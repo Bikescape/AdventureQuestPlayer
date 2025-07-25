@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdventureQuest - Jugar</title>
+    <link rel="stylesheet" href="player-styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div id="loading-screen" class="screen">
+        <div class="loading-content">
+            <div class="logo">🗺️ AdventureQuest</div>
+            <div class="loading-spinner"></div>
+            <p>Cargando aventura...</p>
+        </div>
+    </div>
+
+    <div id="welcome-screen" class="screen hidden">
+        <header class="main-header">
+            <div class="logo">🗺️ AdventureQuest</div>
+        </header>
+        <div class="main-content">
+            <h1>¡Elige tu Aventura!</h1>
+            <div id="active-games-list" class="game-cards-container">
+                <p>Cargando juegos disponibles...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-description-screen" class="screen hidden">
+        <header class="main-header">
+            <button id="game-desc-back-btn" class="btn btn-secondary">← Volver</button>
+            <div class="logo">🗺️ AdventureQuest</div>
+        </header>
+        <div class="main-content">
+            <h2 id="selected-game-title"></h2>
+            <div class="game-details card">
+                <h3>Descripción:</h3>
+                <p id="selected-game-description"></p>
+                <h3>Mecánica:</h3>
+                <p id="selected-game-mechanics"></p>
+                <h3>Narrativa Inicial:</h3>
+                <p id="selected-game-narrative"></p>
+                <div class="form-group">
+                    <label for="team-name-input">Nombre de tu Equipo:</label>
+                    <input type="text" id="team-name-input" placeholder="Ej: Los Cazatesoros" required>
+                </div>
+                <button id="start-game-btn" class="btn btn-primary">¡Iniciar Juego!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <header class="game-header">
+            <div class="logo">🗺️ AQ</div>
+            <div class="game-info">
+                <span class="score">Puntos: <span id="current-score">0</span></span>
+                <span class="timer">Tiempo Total: <span id="game-timer-display">00:00:00</span></span>
+                <span class="timer">Tiempo Prueba: <span id="trial-timer-display">00:00</span></span>
+                <span class="team-name">Equipo: <span id="team-name-display"></span></span>
+            </div>
+            <button id="end-game-early-btn" class="btn btn-secondary">Finalizar Juego</button>
+        </header>
+
+        <div class="main-content">
+            <div id="trial-display" class="card trial-card">
+                <h2 id="trial-title"></h2>
+                <p id="trial-narrative"></p>
+                <div id="trial-media-container" class="media-container hidden">
+                    </div>
+
+                <div id="trial-controls-container">
+                    <div id="qr-input-group" class="form-group hidden">
+                        <label for="qr-code-input">Código QR Escaneado:</label>
+                        <input type="text" id="qr-code-input" placeholder="Escanea el código QR" readonly>
+                        <button id="scan-qr-btn" class="btn btn-secondary">Escanear QR</button>
+                        <div id="qr-reader" class="qr-reader"></div>
+                    </div>
+
+                    <div id="gps-input-group" class="form-group hidden">
+                        <p>Acércate al punto de interés:</p>
+                        <div id="map-container" class="map-container"></div>
+                        <p id="gps-distance-display" class="help-text">Distancia: -- m (Precisión: -- m)</p>
+                        <button id="check-gps-btn" class="btn btn-secondary">Verificar Ubicación</button>
+                    </div>
+
+                    <div id="text-input-group" class="form-group hidden">
+                        <label for="text-answer-input" id="text-question-label">Pregunta:</label>
+                        <input type="text" id="text-answer-input" placeholder="Escribe tu respuesta">
+                        <div id="options-container" class="options-group hidden">
+                            </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="submit-answer-btn" class="btn btn-primary">Validar Respuesta</button>
+                        <button id="request-hint-btn" class="btn btn-secondary">Pedir Pista (<span id="hint-cost-display">0</span> pts)</button>
+                    </div>
+                    <p id="hints-remaining" class="hint-text">Pistas restantes: <span id="hints-count-display"></span></p>
+                    <p id="hint-message" class="hint-text hidden"></p>
+                    <p id="feedback-message" class="feedback-text hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="interlude-screen" class="screen hidden">
+        <header class="main-header">
+            <div class="logo">🗺️ ¡Continuemos!</div>
+        </header>
+        <div class="main-content interlude-content">
+            <h2 id="interlude-title"></h2>
+            <div id="interlude-media-container" class="media-container hidden"></div>
+            <p id="interlude-narrative"></p>
+            <button id="continue-interlude-btn" class="btn btn-primary">Continuar Aventura</button>
+        </div>
+    </div>
+
+    <div id="game-end-screen" class="screen hidden">
+        <header class="main-header">
+            <div class="logo">🎉 ¡Aventura Completada!</div>
+        </header>
+        <div class="main-content text-center">
+            <h1>¡Felicidades, <span id="final-team-name"></span>!</h1>
+            <p>Has completado la aventura:</p>
+            <h2 id="final-game-title"></h2>
+            <div class="final-stats card">
+                <h3>Tu Puntuación Final: <span id="final-score-display">0</span> puntos</h3>
+                <h3>Tiempo Total Empleado: <span id="final-time-display">00:00:00</span></h3>
+                <p>Pistas Usadas: <span id="final-hints-display">0</span></p>
+            </div>
+            <button id="return-to-welcome-btn" class="btn btn-primary">Volver al Inicio</button>
+        </div>
+    </div>
+
+    <div id="app-alert" class="app-alert hidden"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://keunztapjynaavjjdmlb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldW56dGFwanluYWF2ampkbWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NDQ2MTksImV4cCI6MjA2OTAyMDYxOX0.woiFMVYYtalXgYp6uTrflE4dg-1XCjS8bRfqMOf5eoY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
+    <script src="player-game-state.js"></script>
+    <script src="player-supabase-api.js"></script>
+    <script src="player-ui-manager.js"></script>
+    <script src="player-gps-handler.js"></script>
+    <script src="player-qr-scanner.js"></script>
+    <script src="player-leaflet-map.js"></script>
+    <script src="player-media-display.js"></script>
+    <script src="player-script.js"></script>
+</body>
+</html>
