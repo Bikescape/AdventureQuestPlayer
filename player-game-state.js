@@ -1,4 +1,4 @@
-// player/game-state.js
+// player/player-game-state.js
 
 let gameState = {
     currentTeam: null,
