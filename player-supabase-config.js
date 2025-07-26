@@ -5,7 +5,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Función de utilidad para mostrar alertas (copia de shared/utils.js para evitar complejidad de módulos)
+// Función de utilidad para mostrar alertas
 function showAlert(message, type = 'info') {
     let alertDiv = document.getElementById('app-alert');
     if (!alertDiv) {
@@ -15,10 +15,10 @@ function showAlert(message, type = 'info') {
     }
 
     alertDiv.textContent = message;
-    alertDiv.className = `app-alert ${type}`; // Clase base y tipo (info, success, warning, error)
+    alertDiv.className = `app-alert ${type}`;
     alertDiv.style.display = 'block';
 
     setTimeout(() => {
         alertDiv.style.display = 'none';
-    }, 3000); // Ocultar después de 3 segundos
+    }, 3000);
 }
