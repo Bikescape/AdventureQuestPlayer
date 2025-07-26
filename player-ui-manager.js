@@ -21,6 +21,47 @@ function showScreen(screenId) {
     document.body.style.overflow = 'hidden'; // Hide global scrollbar
 }
 
+function displayActiveGames(games) {
+    const activeGamesList = document.getElementById('active-games-list');
+    if (!activeGamesList) {
+        console.error('Elemento #active-games-list no encontrado en el DOM.');
+        return;
+    }
+
+    activeGamesList.innerHTML = ''; // Limpiar lista actual
+
+    if (games.length === 0) {
+        activeGamesList.innerHTML = '<p class="info-message">No hay aventuras activas en este momento. ¡Vuelve pronto!</p>';
+        return;
+    }
+
+    games.forEach(game => {
+        const gameCard = document.createElement('div');
+        gameCard.className = 'game-card';
+        gameCard.dataset.gameId = game.id; // Almacenar el ID del juego
+        gameCard.innerHTML = `
+            <h4>${game.title}</h4>
+            <p>${game.description}</p>
+            <button class="btn btn-primary select-game-btn" data-game-id="${game.id}">Seleccionar</button>
+        `;
+        activeGamesList.appendChild(gameCard);
+    });
+
+    // Asegúrate de que los botones "Seleccionar" tienen un manejador de eventos
+    activeGamesList.querySelectorAll('.select-game-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const gameId = event.target.dataset.gameId;
+            // Llama a la función para manejar la selección del juego (definida en player-script.js)
+            handleGameSelectionLogic(gameId); // Asume que tienes una función global o importada
+        });
+    });
+}
+
+// Asegúrate de exportar/hacer global la función si usas módulos, o simplemente la defines aquí
+// Si no usas módulos y simplemente pegas este código, window.displayActiveGames = displayActiveGames; al final.
+// Para simplificar, asumiremos que se define en el mismo scope o se exporta/importa correctamente.
+window.displayActiveGames = displayActiveGames; // Hazla global para que player-script.js pueda llamarla
+
 /**
  * Hides a specific screen.
  * @param {string} screenId - The ID of the screen to hide.
