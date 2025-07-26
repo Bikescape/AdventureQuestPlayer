@@ -11,7 +11,7 @@ let gameState = {
     gameStartTime: 0, // Unix timestamp for when the game started
     trialStartTime: 0, // Unix timestamp for when the current trial started
     totalHintsUsed: 0,
-    hintsUsedInTrial: 0,
+    hintsUsedInTrial: 0, // Hints used for the current active trial
     isGameActive: false,
     progressLog: [], // Array of completed trials with details
     teamId: null, // ID of the current team
@@ -24,9 +24,8 @@ let gameState = {
     playerMapMarker: null, // Player's location marker
     targetMapMarker: null, // Target trial location marker
     html5QrCode: null, // html5-qrcode instance
-    gameTimerInterval: null, // Interval ID for the global game timer
-    trialTimerInterval: null, // Interval ID for the current trial timer
-    lastActivity: Date.now() // For optimistic locking/concurrency control
+    gameTimerInterval: null,
+    trialTimerInterval: null
 };
 
 // Keys for IndexedDB
@@ -36,7 +35,7 @@ const STORE_NAME = 'gameState';
 
 let db;
 
-// Function to open the IndexedDB
+// Open IndexedDB
 function openDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -44,7 +43,7 @@ function openDB() {
         request.onupgradeneeded = (event) => {
             db = event.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                db.createObjectStore(STORE_NAME);
             }
         };
 
@@ -60,27 +59,22 @@ function openDB() {
     });
 }
 
-// Save current game state to IndexedDB
+// Save game state to IndexedDB
 async function saveGameState() {
     try {
         if (!db) await openDB();
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
+        const stateToStore = { ...gameState };
+        // Remove non-serializable objects (Leaflet map, QR scanner instance)
+        delete stateToStore.playerMap;
+        delete stateToStore.playerMapMarker;
+        delete stateToStore.targetMapMarker;
+        delete stateToStore.html5QrCode;
+        delete stateToStore.gameTimerInterval;
+        delete stateToStore.trialTimerInterval;
 
-        // Prepare a savable version of gameState (remove non-serializable objects like map/qr instances)
-        const savableGameState = { ...gameState };
-        delete savableGameState.playerMap;
-        delete savableGameState.playerMapMarker;
-        delete savableGameState.targetMapMarker;
-        delete savableGameState.html5QrCode;
-        // Do not save timer intervals directly, they will be recreated on resume
-        delete savableGameState.gameTimerInterval;
-        delete savableGameState.trialTimerInterval;
-
-        savableGameState.id = 'current_game_state'; // Use a fixed ID for single state object
-        savableGameState.lastActivity = Date.now(); // Update last activity timestamp
-
-        const request = store.put(savableGameState);
+        const request = store.put(stateToStore, 'currentGameState');
 
         request.onsuccess = () => {
             console.log('Game state saved to IndexedDB.');
@@ -100,13 +94,12 @@ async function loadGameState() {
         if (!db) await openDB();
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('current_game_state');
+        const request = store.get('currentGameState');
 
         return new Promise((resolve) => {
             request.onsuccess = (event) => {
                 const loadedState = event.target.result;
                 if (loadedState) {
-                    // Restore only serializable parts, non-serializable ones will be re-initialized
                     Object.assign(gameState, loadedState);
                     console.log('Game state loaded from IndexedDB.', gameState);
                     resolve(true);
@@ -115,6 +108,7 @@ async function loadGameState() {
                     resolve(false);
                 }
             };
+
             request.onerror = (event) => {
                 console.error('Error loading game state:', event.target.error);
                 resolve(false);
@@ -162,8 +156,7 @@ async function clearGameState() {
                 targetMapMarker: null,
                 html5QrCode: null,
                 gameTimerInterval: null,
-                trialTimerInterval: null,
-                lastActivity: Date.now()
+                trialTimerInterval: null
             };
         };
 
