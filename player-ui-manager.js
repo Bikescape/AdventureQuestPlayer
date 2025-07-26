@@ -206,7 +206,7 @@ function showGameEndScreen(teamName, gameTitle, finalScore, totalTimeSeconds, to
     showScreen('game-end-screen');
 }
 
-// Utility function (can be moved to shared/utils.js)
+// Utility function (can be moved to utils.js)
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
