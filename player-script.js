@@ -3,23 +3,30 @@
 // Global state is managed by player-game-state.js and exposed via `gameState` object
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Attempt to load game state from IndexedDB
     const loaded = await loadGameState();
 
     if (loaded && gameState.isGameActive && gameState.teamId && gameState.gameId) {
-        // If a game was active, try to resume it
         await resumeGame();
     } else {
-        // Otherwise, show the welcome screen and load active games
-        showScreen('loading-screen');
+        showScreen('loading-screen'); // Esta es la pantalla donde te quedas
         setTimeout(async () => {
-            await loadActiveGames();
-            showScreen('welcome-screen');
+            console.log('Intentando cargar juegos activos...'); // <-- Añade esto
+            const activeGames = await loadActiveGames(); // Esta es la función clave
+            console.log('Juegos activos recibidos:', activeGames); // <-- Añade esto para ver qué devuelve
+
+            if (activeGames && activeGames.length > 0) {
+                displayActiveGames(activeGames); // <-- Asegúrate de que esta función se llama y existe
+                console.log('Juegos activos mostrados en la UI.'); // <-- Añade esto
+            } else {
+                console.log('No se encontraron juegos activos o hubo un problema al mostrarlos.'); // <-- Añade esto
+                // Puedes añadir un mensaje en la UI si no hay juegos
+                document.getElementById('active-games-list').innerHTML = '<p>No hay aventuras activas en este momento. Intenta más tarde.</p>';
+            }
+            showScreen('welcome-screen'); // Esto debería cambiar a la pantalla de bienvenida
         }, 500);
     }
-
     setupPlayerEventListeners();
-    updateGameUI(); // Initial UI update for score/hints
+    updateGameUI();
 });
 
 /**
