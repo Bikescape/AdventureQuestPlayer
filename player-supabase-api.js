@@ -5,20 +5,21 @@
  * @returns {Promise<Array>} Array of active game objects.
  */
 async function getActiveGames() {
+    console.log('Intentando obtener juegos activos de Supabase...'); // Añade esto para ver si se llama
     const { data, error } = await supabase
         .from('games')
         .select('*')
-        .eq('is_active', true)
+        .eq('is_active', true) // Verifica que la columna 'is_active' existe en tu tabla 'games'
         .order('title', { ascending: true });
 
     if (error) {
-        console.error('Error fetching active games:', error);
-        showAlert('Error cargando juegos activos. Revisa tu conexión.', 'error');
+        console.error('Error fetching active games:', error); // Esto ya lo tienes
+        showAlert('Error cargando juegos activos: ' + error.message, 'error'); // Muestra el mensaje de error de Supabase
         return [];
     }
+    console.log('Juegos activos obtenidos:', data); // Añade esto para ver los datos
     return data;
 }
-
 /**
  * Fetches full details for a specific game, including its locations and trials.
  * @param {string} gameId - The ID of the game to fetch.
