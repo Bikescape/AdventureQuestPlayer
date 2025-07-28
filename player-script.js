@@ -799,7 +799,7 @@ async function continueFromFeedback() {
 
 async function completeGame() {
     stopGlobalTimer();
-    const totalGameTimeSeconds = currentTeam.total_time_sec; // CAMBIADO: total_time a total_time_sec
+    const totalGameTimeSeconds = currentTeam.total_time_seconds; 
     const finalScoreValue = currentTeam.total_score;
 
     const { error: rankingError } = await supabase
