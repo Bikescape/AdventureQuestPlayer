@@ -1,45 +1,21 @@
-// supabase-config.js
-// Configuración de Supabase
-const SUPABASE_URL = 'https://keunztapjynaavjjdmlb.supabase.co'; // Reemplaza con tu URL de Supabase
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldW56dGFwanluYWF2ampkbWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NDQ2MTksImV4cCI6MjA2OTAyMDYxOX0.woiFMVYYtalXgYp6uTrflE4dg-1XCjS8bRfqMOf5eoY'; // Reemplaza con tu clave anon de Supabase
+// player-supabase-config.js
+// Configuración de Supabase para la parte de Jugadores
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Reemplaza con tus propias credenciales de Supabase
+const SUPABASE_URL = 'https://keunztapjynaavjjdmlb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtldW56dGFwanluYWF2ampkbWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NDQ2MTksImV4cCI6MjA2OTAyMDYxOX0.woiFMVYYtalXgYp6uTrflE4dg-1XCjS8bRfqMOf5eoY';
 
-// Función de utilidad para mostrar alertas (puede ser compartida o duplicada si hay conflictos de módulos)
-function showAlert(message, type = 'info') {
-    let alertDiv = document.getElementById('app-alert');
-    if (!alertDiv) {
-        alertDiv = document.createElement('div');
-        alertDiv.id = 'app-alert';
-        document.body.appendChild(alertDiv);
-    }
+let supabase; // Declara la variable supabase globalmente.
 
-    alertDiv.classList.remove('info', 'success', 'warning', 'error', 'hidden');
-    alertDiv.classList.add('app-alert', type);
-    alertDiv.textContent = message;
-
-    // Reiniciar la animación si ya estaba visible
-    alertDiv.style.animation = 'none';
-    alertDiv.offsetHeight; // Trigger reflow
-    alertDiv.style.animation = null;
-    alertDiv.style.animation = 'fadeOut 0.5s forwards 2.5s'; // Fade out after 2.5s delay
-
-    // Ocultar después de 3 segundos (que es el tiempo total de la animación + delay)
-    setTimeout(() => {
-        alertDiv.classList.add('hidden');
-    }, 3000);
-}
-
-// Función de utilidad para formatear el tiempo (HH:MM:SS)
-function formatTime(seconds) {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
-
-// Función de utilidad para formatear la fecha
-function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('es-ES', options);
+// *** CORRECCIÓN CRÍTICA AQUÍ: Asegurarse de que window.supabase está disponible antes de usarlo ***
+// Esta verificación es crucial porque si el script de Supabase CDN no se carga,
+// window.supabase será undefined y causará el TypeError.
+if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Supabase client initialized successfully.');
+} else {
+    console.error("Error CRÍTICO: La librería de Supabase (window.supabase) no se ha cargado correctamente o la función createClient no está disponible.");
+    // Muestra una alerta amigable al usuario, ya que la aplicación no funcionará sin Supabase
+    alert("Error de inicialización: La aplicación no pudo conectar con la base de datos. Por favor, asegúrate de que estás conectado a internet y recarga la página. (Más detalles en la consola del navegador)");
+    // Aquí no podemos usar showModal porque player-script.js aún no se ha cargado/ejecutado
 }
