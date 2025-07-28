@@ -195,7 +195,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-            navigator.serviceWorker.register('AdventureQuestPlayer/service-worker.js')
+            navigator.serviceWorker.register('./service-worker.js')
                 .then(reg => {
                     console.log('Service Worker registrado con éxito:', reg);
                 })
