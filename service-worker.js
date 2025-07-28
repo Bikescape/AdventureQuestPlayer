@@ -1,10 +1,10 @@
 // service-worker.js
 const CACHE_NAME = 'adventurequest-cache-v1';
 const urlsToCache = [
-    './player-index.html',
+    './index.html',
     './player-styles.css',
     './player-script.js',
-    './supabase-config.js', // Shared config
+    './player-supabase-config.js', // Shared config
     './manifest.json',
     'https://unpkg.com/@supabase/supabase-js@2',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
