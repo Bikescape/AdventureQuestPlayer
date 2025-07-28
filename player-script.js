@@ -359,7 +359,7 @@ if (startGameBtn) {
                     last_trial_start_time: null,
                     hints_used_global: 0,
                     hints_used_per_trial: [],
-                    total_time_sec: 0, // CAMBIADO: total_time a total_time_sec
+                    total_time_seconds: 0, 
                     total_score: 0,
                     progress_log: [],
                     last_activity: new Date().toISOString()
@@ -770,7 +770,7 @@ async function completeTrial(pointsAwarded) {
     const { error } = await supabase
         .from('teams')
         .update({
-            total_time_sec: (currentTeam.total_time_sec || 0) + timeTaken, // CAMBIADO: total_time a total_time_sec
+            total_time_seconds: (currentTeam.total_time_seconds || 0) + timeTaken, //
             total_score: (currentTeam.total_score || 0) + finalTrialScore,
             progress_log: [...(currentTeam.progress_log || []), progressLogEntry],
             last_activity: new Date().toISOString()
@@ -781,7 +781,7 @@ async function completeTrial(pointsAwarded) {
         console.error('Error updating team progress:', error);
         showAlert('Error al guardar el progreso.', 'error');
     } else {
-        currentTeam.total_time_sec = (currentTeam.total_time_sec || 0) + timeTaken; // CAMBIADO: total_time a total_time_sec
+        currentTeam.total_time_seconds = (currentTeam.total_time_seconds || 0) + timeTaken; // 
         currentTeam.total_score = (currentTeam.total_score || 0) + finalTrialScore;
         currentTeam.progress_log = [...(currentTeam.progress_log || []), progressLogEntry];
         currentScoreDisplay.textContent = currentTeam.total_score;
