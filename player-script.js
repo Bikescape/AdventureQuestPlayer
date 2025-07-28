@@ -17,10 +17,16 @@ let trialTimerInterval = null;
 let gameStartTime = 0; // Timestamp when current game started (initialized)
 let trialStartTime = 0; // Timestamp when current trial started
 
-let playerMap = null; // Leaflet map instance
-let playerMarker = null; // Player's marker on the map
-let targetMarker = null; // Target trial marker on the map
-let gpsWatchId = null; // ID for navigator.geolocation.watchPosition
+let playerMap = null; // Leaflet map instance for GPS TRIALS
+let playerMarker = null; // Player's marker on the map for GPS TRIALS
+let targetMarker = null; // Target trial marker on the map for GPS TRIALS
+let gpsWatchId = null; // ID for navigator.geolocation.watchPosition for GPS TRIALS
+
+// New: Map for LOCATION ARRIVAL
+let locationArrivalMap = null; // Leaflet map instance for LOCATION ARRIVAL
+let locationPlayerMarker = null; // Player's marker on the location arrival map
+let locationTargetMarker = null; // Target location marker on the location arrival map
+let locationGpsWatchId = null; // ID for navigator.geolocation.watchPosition for LOCATION ARRIVAL
 
 let qrScanner = null; // html5-qrcode instance
 let qrScanning = false; // Flag to prevent multiple scanner instances
@@ -48,6 +54,13 @@ const trialTimerDisplay = document.getElementById('trial-timer');
 const currentScoreDisplay = document.getElementById('current-score');
 const locationNarrativeSection = document.getElementById('location-narrative-section');
 const locationNarrativeDisplay = document.getElementById('location-narrative');
+const locationMedia = document.getElementById('location-media'); // Container for location image/audio
+
+// New: Elements for Location Arrival GPS
+const locationArrivalMapContainer = document.getElementById('location-arrival-map');
+const locationArrivalMessage = document.getElementById('location-arrival-message');
+const startLocationTrialsBtn = document.getElementById('start-location-trials-btn'); // Moved here for global access
+
 
 // Specific trial sections
 const textTrialSection = document.getElementById('text-trial-section');
@@ -205,13 +218,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         modalCloseBtn.addEventListener('click', hideModal);
     }
 
+    // Event listener for the "Comenzar Pruebas" button for location arrival
+    if (startLocationTrialsBtn) {
+        startLocationTrialsBtn.addEventListener('click', async () => {
+            if (currentTrials.length === 0) {
+                // Fetch trials if not already fetched (e.g., first time entering location)
+                const { data: trials, error: trialError } = await supabase
+                    .from('trials')
+                    .select('*')
+                    .eq('location_id', currentLocations[currentLocationIndex].id)
+                    .order('order_index', { ascending: true }); // Usando 'order_index' para trials
+
+                if (trialError) {
+                    console.error('Error fetching trials for location:', trialError);
+                    showModal('Error', 'Error al cargar las pruebas de esta ubicación. ' + trialError.message);
+                    return;
+                }
+                currentTrials = trials;
+
+                if (currentTrials.length === 0) {
+                    showModal('Sin Pruebas', 'Esta ubicación no tiene pruebas configuradas. Contacta al administrador.');
+                    return;
+                }
+            }
+            currentTrialIndex = 0; // Reset trial index for new location
+            await displayCurrentTrial();
+        });
+    }
+
+
     const storedTeamId = localStorage.getItem('currentTeamId');
     if (storedTeamId) {
         const teamLoaded = await loadTeamState(storedTeamId);
         if (teamLoaded && currentTeam) {
             showScreen(gameActiveScreen);
             resumeGameTimers();
-            await displayCurrentTrial();
+            // If already in a trial, display it. Otherwise, display location narrative or check arrival.
+            if (currentTeam.current_trial_id) {
+                await displayCurrentTrial();
+            } else if (currentTeam.current_location_id) {
+                await displayLocationNarrative(currentLocations[currentLocationIndex]);
+            }
             showAlert('Reanudando juego como equipo: ' + currentTeam.name, 'info'); // Usando 'name' para el equipo
             return;
         } else {
@@ -359,7 +406,7 @@ if (startGameBtn) {
                     last_trial_start_time: null,
                     hints_used_global: 0,
                     hints_used_per_trial: [],
-                    total_time_seconds: 0, // CORRECTED: total_time_seconds
+                    total_time_seconds: 0,
                     total_score: 0,
                     progress_log: [],
                     last_activity: new Date().toISOString()
@@ -423,7 +470,7 @@ async function initializeGameFlowForTeam() {
             last_activity: new Date().toISOString(),
             start_time: new Date().toISOString(), // Ensure start_time is updated for new game sessions
             // Reset progression stats for a new game
-            total_time_seconds: 0, // CORRECTED: total_time_seconds
+            total_time_seconds: 0,
             total_score: 0,
             hints_used_global: 0,
             hints_used_per_trial: [],
@@ -440,7 +487,7 @@ async function initializeGameFlowForTeam() {
     currentTeam.current_location_id = currentLocations[0].id;
     currentTeam.current_trial_id = null;
     currentTeam.start_time = new Date().toISOString();
-    currentTeam.total_time_seconds = 0; // CORRECTED: total_time_seconds
+    currentTeam.total_time_seconds = 0;
     currentTeam.total_score = 0;
     currentTeam.hints_used_global = 0;
     currentTeam.hints_used_per_trial = [];
@@ -542,43 +589,50 @@ async function displayLocationNarrative(location) {
     gpsTrialSection.classList.add('hidden');
     locationNarrativeSection.classList.remove('hidden'); // Show location narrative section
 
-    // Usar 'initial_narrative' de la tabla locations
+    // Update location narrative content
     locationNarrativeDisplay.innerHTML = `
         <h2>${location.name}</h2>
         <p>${location.initial_narrative}</p>
-        ${location.image_url ? `<img src="${location.image_url}" alt="Ubicación" class="narrative-image">` : ''}
-        ${location.audio_url ? `<audio controls src="${location.audio_url}"></audio>` : ''}
-        <button id="start-location-trials-btn" class="main-action-button">Comenzar Pruebas</button>
     `;
+    locationMedia.innerHTML = ''; // Clear previous media
+    if (location.image_url) {
+        const img = document.createElement('img');
+        img.src = location.image_url;
+        img.alt = `Imagen de ${location.name}`;
+        img.classList.add('narrative-image');
+        locationMedia.appendChild(img);
+    }
+    if (location.audio_url) {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = location.audio_url;
+        audio.classList.add('narrative-audio');
+        locationMedia.appendChild(audio);
+        audio.play().catch(e => console.error("Error playing location audio:", e));
+    }
 
-    const startLocationTrialsBtn = document.getElementById('start-location-trials-btn');
-    if (startLocationTrialsBtn) {
-        startLocationTrialsBtn.addEventListener('click', async () => {
-            // Assuming 'order_index' for trials
-            const { data: trials, error: trialError } = await supabase
-                .from('trials')
-                .select('*')
-                .eq('location_id', location.id)
-                .order('order_index', { ascending: true }); // Usando 'order_index' para trials
 
-            if (trialError) {
-                console.error('Error fetching trials for location:', trialError);
-                showModal('Error', 'Error al cargar las pruebas de esta ubicación. ' + trialError.message);
-                return;
-            }
-            currentTrials = trials;
-
-            if (currentTrials.length === 0) {
-                showModal('Sin Pruebas', 'Esta ubicación no tiene pruebas configuradas. Contacta al administrador.');
-                return;
-            }
-            currentTrialIndex = 0; // Reset trial index for new location
-            await displayCurrentTrial();
-        });
+    // Check if location has GPS coordinates for arrival
+    if (location.latitude && location.longitude && typeof location.tolerance_meters === 'number') {
+        locationArrivalMapContainer.classList.remove('hidden');
+        locationArrivalMessage.classList.remove('hidden');
+        startLocationTrialsBtn.disabled = true; // Disable button until arrived
+        locationArrivalMessage.textContent = 'Dirígete a la ubicación para continuar...';
+        initializeLocationArrivalMap(location.latitude, location.longitude, location.tolerance_meters);
+    } else {
+        // If no GPS coordinates for location, automatically enable starting trials
+        locationArrivalMapContainer.classList.add('hidden');
+        locationArrivalMessage.classList.add('hidden');
+        stopLocationGpsWatch(); // Ensure no previous watch is active
+        startLocationTrialsBtn.disabled = false; // Enable button immediately
     }
 }
 
 async function displayCurrentTrial() {
+    stopLocationGpsWatch(); // Ensure location GPS watch is stopped when trials start
+    locationArrivalMapContainer.classList.add('hidden'); // Hide location map
+    locationArrivalMessage.classList.add('hidden');
+
     if (!currentGame || !currentTeam || currentLocations.length === 0) {
         showModal('Error de Juego', 'El estado del juego es incorrecto. Por favor, reinicia la aplicación.');
         return;
@@ -616,7 +670,7 @@ async function displayCurrentTrial() {
 
 
     document.querySelectorAll('.trial-section').forEach(sec => sec.classList.add('hidden'));
-    locationNarrativeSection.classList.add('hidden');
+    locationNarrativeSection.classList.add('hidden'); // Hide location narrative section when trial starts
 
     trialNarrativeDisplay.textContent = currentTrial.narrative;
     trialImage.src = ''; trialImage.classList.add('hidden');
@@ -747,7 +801,7 @@ async function displayCurrentTrial() {
 
 async function completeTrial(pointsAwarded) {
     stopTrialTimer();
-    stopGpsWatch();
+    stopGpsWatch(); // Stop GPS for trial
     stopQrScanner();
 
     const timeTaken = Math.floor((Date.now() - trialStartTime) / 1000);
@@ -770,7 +824,7 @@ async function completeTrial(pointsAwarded) {
     const { error } = await supabase
         .from('teams')
         .update({
-            total_time_seconds: (currentTeam.total_time_seconds || 0) + timeTaken, // CORRECTED: total_time_seconds
+            total_time_seconds: (currentTeam.total_time_seconds || 0) + timeTaken,
             total_score: (currentTeam.total_score || 0) + finalTrialScore,
             progress_log: [...(currentTeam.progress_log || []), progressLogEntry],
             last_activity: new Date().toISOString()
@@ -781,7 +835,7 @@ async function completeTrial(pointsAwarded) {
         console.error('Error updating team progress:', error);
         showAlert('Error al guardar el progreso.', 'error');
     } else {
-        currentTeam.total_time_seconds = (currentTeam.total_time_seconds || 0) + timeTaken; // CORRECTED: total_time_seconds
+        currentTeam.total_time_seconds = (currentTeam.total_time_seconds || 0) + timeTaken;
         currentTeam.total_score = (currentTeam.total_score || 0) + finalTrialScore;
         currentTeam.progress_log = [...(currentTeam.progress_log || []), progressLogEntry];
         currentScoreDisplay.textContent = currentTeam.total_score;
@@ -799,7 +853,11 @@ async function continueFromFeedback() {
 
 async function completeGame() {
     stopGlobalTimer();
-    const totalGameTimeSeconds = currentTeam.total_time_seconds; // CORRECTED: total_time_seconds
+    stopLocationGpsWatch(); // Ensure location GPS is stopped on game completion
+    stopGpsWatch(); // Ensure trial GPS is stopped
+    stopQrScanner();
+
+    const totalGameTimeSeconds = currentTeam.total_time_seconds;
     const finalScoreValue = currentTeam.total_score;
 
     const { error: rankingError } = await supabase
@@ -1001,7 +1059,7 @@ if (validateAnswerBtn) {
 });
 
 
-// --- GPS Functions ---
+// --- GPS Functions (for TRIALS) ---
 function initializePlayerMap(targetLat, targetLng, tolerance) {
     if (playerMap) {
         playerMap.remove();
@@ -1069,33 +1127,33 @@ function startGpsWatch(targetLat, targetLng, tolerance) {
             playerMap.panTo([latitude, longitude]);
 
             const distance = getDistance(latitude, longitude, targetLat, targetLng);
-            console.log(`Distancia al objetivo: ${distance.toFixed(2)} metros`);
+            console.log(`Distancia al objetivo de la prueba: ${distance.toFixed(2)} metros`);
 
             // Asegurarse de usar tolerance_meters del trial
             if (distance <= currentTrial.tolerance_meters) {
-                showAlert('¡Ubicación alcanzada! Validando prueba...', 'success');
+                showAlert('¡Ubicación de prueba alcanzada! Validando prueba...', 'success');
                 stopGpsWatch();
                 await completeTrial(currentGame.initial_score_per_trial || 100);
             }
         },
         (error) => {
-            console.error('Error de geolocalización:', error);
+            console.error('Error de geolocalización para prueba:', error);
             let errorMessage = '';
             switch (error.code) {
                 case error.PERMISSION_DENIED:
                     errorMessage = 'Permiso de geolocalización denegado. Por favor, habilítalo en la configuración de tu navegador.';
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    errorMessage = 'Información de ubicación no disponible.';
+                    errorMessage = 'Información de ubicación de prueba no disponible.';
                     break;
                 case error.TIMEOUT:
-                    errorMessage = 'La solicitud de ubicación ha caducado.';
+                    errorMessage = 'La solicitud de ubicación de prueba ha caducado.';
                     break;
                 case error.UNKNOWN_ERROR:
-                    errorMessage = 'Un error desconocido ocurrió al obtener la ubicación.';
+                    errorMessage = 'Un error desconocido ocurrió al obtener la ubicación para la prueba.';
                     break;
             }
-            showModal('Error GPS', errorMessage + ' Asegúrate de tener buena señal GPS.');
+            showModal('Error GPS de Prueba', errorMessage + ' Asegúrate de tener buena señal GPS.');
         },
         options
     );
@@ -1105,7 +1163,7 @@ function stopGpsWatch() {
     if (gpsWatchId !== null) {
         navigator.geolocation.clearWatch(gpsWatchId);
         gpsWatchId = null;
-        console.log('GPS watch stopped.');
+        console.log('GPS watch for trial stopped.');
     }
     if (gpsMapContainer) {
         gpsMapContainer.classList.add('hidden');
@@ -1114,6 +1172,124 @@ function stopGpsWatch() {
         playerMap.invalidateSize();
     }
 }
+
+
+// --- New: GPS Functions (for LOCATION ARRIVAL) ---
+function initializeLocationArrivalMap(targetLat, targetLng, tolerance) {
+    if (locationArrivalMap) {
+        locationArrivalMap.remove();
+    }
+
+    locationArrivalMapContainer.classList.remove('hidden');
+
+    locationArrivalMap = L.map(locationArrivalMapContainer).setView([targetLat, targetLng], 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(locationArrivalMap);
+
+    if (locationTargetMarker) {
+        locationArrivalMap.removeLayer(locationTargetMarker);
+    }
+    locationTargetMarker = L.circleMarker([targetLat, targetLng], {
+        color: 'red',
+        fillColor: '#f03',
+        fillOpacity: 0.5,
+        radius: 8
+    }).addTo(locationArrivalMap).bindPopup(`Ubicación Objetivo: ${currentLocations[currentLocationIndex].name}`).openPopup();
+
+    L.circle([targetLat, targetLng], {
+        color: 'blue',
+        fillColor: '#30a',
+        fillOpacity: 0.2,
+        radius: tolerance
+    }).addTo(locationArrivalMap);
+
+    if (locationPlayerMarker) {
+        locationArrivalMap.removeLayer(locationPlayerMarker);
+    }
+    locationPlayerMarker = L.circleMarker([0, 0], {
+        color: 'green',
+        fillColor: '#0f3',
+        fillOpacity: 0.8,
+        radius: 6
+    }).addTo(locationArrivalMap).bindPopup('Tu ubicación');
+
+    startLocationGpsWatch(targetLat, targetLng, tolerance);
+}
+
+function startLocationGpsWatch(targetLat, targetLng, tolerance) {
+    if (locationGpsWatchId) {
+        stopLocationGpsWatch();
+    }
+
+    if (!navigator.geolocation) {
+        showAlert('Tu navegador no soporta geolocalización.', 'error');
+        showModal('Error GPS', 'Tu navegador no soporta la API de geolocalización, necesaria para la llegada a ubicaciones.');
+        return;
+    }
+
+    const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    };
+
+    locationGpsWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            locationPlayerMarker.setLatLng([latitude, longitude]);
+            locationArrivalMap.panTo([latitude, longitude]);
+
+            const distance = getDistance(latitude, longitude, targetLat, targetLng);
+            console.log(`Distancia a la ubicación objetivo: ${distance.toFixed(2)} metros`);
+
+            if (distance <= tolerance) {
+                showAlert('¡Has llegado a la ubicación! Puedes comenzar las pruebas.', 'success');
+                locationArrivalMessage.textContent = '¡Has llegado! Pulsa "Comenzar Pruebas".';
+                startLocationTrialsBtn.disabled = false; // Enable the button
+                stopLocationGpsWatch(); // Stop watching once arrived
+            } else {
+                locationArrivalMessage.textContent = `Dirígete a la ubicación. Distancia: ${distance.toFixed(0)}m`;
+            }
+        },
+        (error) => {
+            console.error('Error de geolocalización para ubicación:', error);
+            let errorMessage = '';
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'Permiso de geolocalización denegado. Habilítalo para jugar.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = 'Información de ubicación de la ubicación no disponible.';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = 'La solicitud de ubicación de la ubicación ha caducado.';
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMessage = 'Un error desconocido ocurrió al obtener la ubicación para la ubicación.';
+                    break;
+            }
+            showModal('Error GPS de Ubicación', errorMessage + ' Asegúrate de tener buena señal GPS.');
+            startLocationTrialsBtn.disabled = true; // Keep button disabled on error
+        },
+        options
+    );
+}
+
+function stopLocationGpsWatch() {
+    if (locationGpsWatchId !== null) {
+        navigator.geolocation.clearWatch(locationGpsWatchId);
+        locationGpsWatchId = null;
+        console.log('GPS watch for location arrival stopped.');
+    }
+    if (locationArrivalMap) {
+        // We might not remove the map, just hide it or invalidate its size if needed
+        // locationArrivalMap.remove(); // Only if completely done with it
+        locationArrivalMap.invalidateSize(); // Important for proper display if it was hidden
+    }
+}
+
 
 // --- QR Scanner Functions ---
 if (qrScanBtn) {
@@ -1265,7 +1441,8 @@ if (playAgainBtn) {
         currentTrialIndex = 0;
         stopGlobalTimer();
         stopTrialTimer();
-        stopGpsWatch();
+        stopGpsWatch(); // Stop GPS for trial
+        stopLocationGpsWatch(); // Stop GPS for location arrival
         stopQrScanner();
         localStorage.removeItem('currentTeamId'); // Clear any residual state
         showScreen(gameSelectionScreen);
