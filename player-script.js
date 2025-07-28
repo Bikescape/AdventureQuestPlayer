@@ -5,24 +5,23 @@
 // y que la variable 'supabase' está correctamente definida y accesible globalmente.
 
 // --- Global State Variables ---
-let currentTeam = null; // Stores current team data from Supabase
-let currentGame = null; // Stores current game data from Supabase
-let currentLocations = []; // All locations for the current game
-let currentTrials = []; // All trials for the current location
-let currentLocationIndex = 0; // For linear games
-let currentTrialIndex = 0; // For linear trials within a location
-
-let gameTimerInterval = null;
+let currentTeam = null;
+let currentGame = null;
+let currentLocations = [];
+let currentLocationIndex = -1; // -1 when no location is active (e.g., in selectable game at selection screen)
+let currentTrials = [];
+let currentTrialIndex = 0;
+let gameStartTime = null; // Timestamp when the game officially started (or resumed)
+let globalGameTimerInterval = null;
 let trialTimerInterval = null;
-let gameStartTime = 0; // Timestamp when current game started (initialized)
-let trialStartTime = 0; // Timestamp when current trial started
+let currentTrialDuration = 0; // Duration for the current trial in seconds
 
 let playerMap = null; // Leaflet map instance for GPS TRIALS
 let playerMarker = null; // Player's marker on the map for GPS TRIALS
 let targetMarker = null; // Target trial marker on the map for GPS TRIALS
 let gpsWatchId = null; // ID for navigator.geolocation.watchPosition for GPS TRIALS
 
-// New: Map for LOCATION ARRIVAL
+// New: Map for LOCATION ARRIVAL (EXISTING, but ensure correct ID)
 let locationArrivalMap = null; // Leaflet map instance for LOCATION ARRIVAL
 let locationPlayerMarker = null; // Player's marker on the location arrival map
 let locationTargetMarker = null; // Target location marker on the location arrival map
@@ -40,13 +39,19 @@ const gameList = document.getElementById('game-list');
 
 const gameDetailsScreen = document.getElementById('game-details-screen');
 const gameDetailTitle = document.getElementById('game-detail-title');
-const gameDetailDescription = document.getElementById('game-detail-description');
+const gameDetailDescription = document.getElementById('game-detail-description'); // CORRECTED LINE
 const gameDetailMechanics = document.getElementById('game-detail-mechanics');
 const gameDetailInitialNarrative = document.getElementById('game-detail-initial-narrative');
 const gameDetailMedia = document.getElementById('game-detail-media'); // Container for image/audio
 const teamNameInput = document.getElementById('team-name-input');
 const startGameBtn = document.getElementById('start-game-btn');
 const backToGameSelectionBtn = document.getElementById('back-to-game-selection-btn');
+
+// New: Location Selection Screen Elements
+const locationSelectionScreen = document.getElementById('location-selection-screen');
+const gameSelectionInitialNarrative = document.getElementById('game-selection-initial-narrative');
+const locationListContainer = document.getElementById('location-list-container');
+const backToGameDetailsFromLocationSelectBtn = document.getElementById('back-to-game-details-from-location-select-btn');
 
 const gameActiveScreen = document.getElementById('game-active-screen');
 const gameTotalTimeDisplay = document.getElementById('game-total-time');
@@ -56,159 +61,45 @@ const locationNarrativeSection = document.getElementById('location-narrative-sec
 const locationNarrativeDisplay = document.getElementById('location-narrative');
 const locationMedia = document.getElementById('location-media'); // Container for location image/audio
 
-// New: Elements for Location Arrival GPS
+// New: Elements for Location Arrival GPS (existing, but double check IDs)
 const locationArrivalMapContainer = document.getElementById('location-arrival-map');
 const locationArrivalMessage = document.getElementById('location-arrival-message');
 const startLocationTrialsBtn = document.getElementById('start-location-trials-btn'); // Moved here for global access
 
 
-// Specific trial sections
-const textTrialSection = document.getElementById('text-trial-section');
-const qrTrialSection = document.getElementById('qr-trial-section');
-const gpsTrialSection = document.getElementById('gps-trial-section');
-
-// Common trial elements
-const trialNarrativeDisplay = document.getElementById('trial-narrative');
-const trialImage = document.getElementById('trial-image');
-const trialAudio = document.getElementById('trial-audio');
+const trialScreen = document.getElementById('trial-screen');
+const trialQuestionDisplay = document.getElementById('trial-question');
+const qrReaderContainer = document.getElementById('qr-reader-container');
+const qrReaderVideo = document.getElementById('qr-reader');
+const qrReaderBtn = document.getElementById('qr-reader-btn');
+const qrCodeValueDisplay = document.getElementById('qr-code-value');
+const qrSubmitBtn = document.getElementById('qr-submit-btn');
+const answerInput = document.getElementById('answer-input');
+const submitAnswerBtn = document.getElementById('submit-answer-btn');
 const hintBtn = document.getElementById('hint-btn');
-const hintCostDisplay = document.getElementById('hint-cost');
-const hintsRemainingDisplay = document.getElementById('hints-remaining');
-
-// TEXT Trial elements
-const textQuestionDisplay = document.getElementById('text-question');
-const textAnswerInput = document.getElementById('text-answer-input');
-const textOptionsContainer = document.getElementById('text-options-container');
-const validateAnswerBtn = document.getElementById('validate-answer-btn');
-
-// QR Trial elements
-const qrScannerContainer = document.getElementById('qr-scanner');
-const qrScanBtn = document.getElementById('qr-scan-btn');
-const qrResultDisplay = document.getElementById('qr-result');
-const qrHintBtn = document.getElementById('qr-hint-btn'); // Specific hint button for QR
-const qrHintCostDisplay = document.getElementById('qr-hint-cost');
-const qrHintsRemainingDisplay = document.getElementById('qr-hints-remaining');
-
-// GPS Trial elements
-const gpsMapContainer = document.getElementById('gps-map');
-const gpsHintBtn = document.getElementById('gps-hint-btn'); // Specific hint button for GPS
-const gpsHintCostDisplay = document.getElementById('gps-hint-cost');
-const gpsHintsRemainingDisplay = document.getElementById('gps-hints-remaining');
+const trialMedia = document.getElementById('trial-media'); // Container for image/audio/video in trials
 
 const feedbackScreen = document.getElementById('feedback-screen');
-const feedbackMessage = document.getElementById('feedback-message');
-const feedbackScore = document.getElementById('feedback-score');
+const feedbackMessageDisplay = document.getElementById('feedback-message');
+const feedbackDetailsDisplay = document.getElementById('feedback-details');
+const feedbackScoreChange = document.getElementById('feedback-score-change');
 const continueGameBtn = document.getElementById('continue-game-btn');
 
-const gameCompletionScreen = document.getElementById('game-completion-screen');
-const finalGameTitle = document.getElementById('final-game-title');
-const finalScore = document.getElementById('final-score');
-const finalTime = document.getElementById('final-time');
-const playAgainBtn = document.getElementById('play-again-btn');
-const viewFinalRankingsBtn = document.getElementById('view-final-rankings-btn');
+const finalScreen = document.getElementById('final-screen');
+const finalScoreDisplay = document.getElementById('final-score');
+const finalTimeDisplay = document.getElementById('final-time');
+const finalRankingList = document.getElementById('final-ranking-list');
+const startNewGameAgainBtn = document.getElementById('start-new-game-again-btn');
 
-const globalRankingsScreen = document.getElementById('global-rankings-screen');
-const globalRankingsGameSelect = document.getElementById('global-rankings-game-select');
-const globalRankingsList = document.getElementById('global-rankings-list');
-const backToMenuFromRankingsBtn = document.getElementById('back-to-menu-from-rankings-btn');
-
-const appAlert = document.getElementById('app-alert');
-const modalContainer = document.getElementById('modal-container');
+const modal = document.getElementById('modal');
 const modalTitle = document.getElementById('modal-title');
 const modalMessage = document.getElementById('modal-message');
 const modalCloseBtn = document.getElementById('modal-close-btn');
 
-
-// --- Utility Functions ---
-function showScreen(screen) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    screen.classList.remove('hidden');
-}
-
-function showAlert(message, type = 'info') {
-    if (!appAlert) {
-        console.warn('App alert element not found. Message:', message);
-        console.log(`ALERT: ${message}`);
-        return;
-    }
-    appAlert.textContent = message;
-    appAlert.className = `app-alert ${type}`;
-    appAlert.style.display = 'block';
-
-    setTimeout(() => {
-        appAlert.style.display = 'none';
-    }, 3000);
-}
-
-function showModal(title, message) {
-    if (!modalContainer || !modalTitle || !modalMessage) {
-        console.error('Error: Generic modal elements not found in DOM. Falling back to native alert.');
-        alert(`Modal Content:\nTitle: ${title}\nMessage: ${message}`);
-        return;
-    }
-    modalTitle.textContent = title;
-    modalMessage.textContent = message;
-    modalContainer.classList.remove('hidden');
-}
-
-function hideModal() {
-    if (modalContainer) {
-        modalContainer.classList.add('hidden');
-        modalTitle.textContent = '';
-        modalMessage.textContent = '';
-    }
-}
-
-function formatTime(seconds) {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    const pad = (num) => String(num).padStart(2, '0');
-
-    if (hours > 0) {
-        return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`;
-    } else {
-        return `${pad(minutes)}:${pad(remainingSeconds)}`;
-    }
-}
-
-// Haversine formula for distance between two points on Earth (in meters)
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const d = R * c; // in metres
-    return d;
-}
-
-// --- PWA Service Worker Registration ---
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => {
-                    console.log('Service Worker registrado con éxito:', reg);
-                })
-                .catch(err => {
-                    console.error('Fallo el registro del Service Worker:', err);
-                    showAlert('Error: No se pudo registrar el Service Worker para funciones offline. Recarga la página en un servidor.', 'error');
-                });
-        } else {
-            console.warn('Service Worker no registrado: El protocolo URL actual no es HTTP o HTTPS. Usa un servidor local.');
-            showAlert('Advertencia: Funciones offline no disponibles. Usa un servidor web (ej. http://localhost) para la mejor experiencia.', 'warning');
-        }
-    });
-}
+const gameProgressDisplay = document.getElementById('game-progress-display');
+const globalAlert = document.getElementById('global-alert');
+const alertMessage = document.getElementById('alert-message');
+const closeAlertBtn = document.getElementById('close-alert-btn');
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -217,10 +108,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (modalCloseBtn) {
         modalCloseBtn.addEventListener('click', hideModal);
     }
+    if (closeAlertBtn) {
+        closeAlertBtn.addEventListener('click', hideAlert);
+    }
 
-    // Event listener for the "Comenzar Pruebas" button for location arrival
+    startNewGameFlowBtn.addEventListener('click', () => {
+        teamNameInput.value = ''; // Clear previous team name
+        fetchActiveGames();
+    });
+
+    backToGameSelectionBtn.addEventListener('click', () => {
+        showScreen(gameSelectionScreen);
+    });
+
+    startGameBtn.addEventListener('click', createAndStartGame);
+
+    submitAnswerBtn.addEventListener('click', submitAnswer);
+    hintBtn.addEventListener('click', requestHint);
+
+    qrReaderBtn.addEventListener('click', toggleQrScanner);
+    qrSubmitBtn.addEventListener('click', () => {
+        const qrValue = qrCodeValueDisplay.textContent;
+        if (qrValue) {
+            submitAnswer(qrValue); // Use the QR value as the answer
+            stopQrScanner();
+        } else {
+            showAlert('No se ha escaneado ningún código QR.', 'warning');
+        }
+    });
+
+    continueGameBtn.addEventListener('click', continueFromFeedback);
+    startNewGameAgainBtn.addEventListener('click', () => {
+        localStorage.removeItem('currentTeamId'); // Clear saved game state
+        location.reload(); // Reload the page to start fresh
+    });
+
+    // Event listener for the "Comenzar Pruebas" button for location arrival (EXISTING)
     if (startLocationTrialsBtn) {
         startLocationTrialsBtn.addEventListener('click', async () => {
+            // Stop GPS tracking for location arrival
+            if (locationGpsWatchId) {
+                navigator.geolocation.clearWatch(locationGpsWatchId);
+                locationGpsWatchId = null;
+            }
+            locationArrivalMapContainer.innerHTML = ''; // Clear map
+
             if (currentTrials.length === 0) {
                 // Fetch trials if not already fetched (e.g., first time entering location)
                 const { data: trials, error: trialError } = await supabase
@@ -246,6 +178,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // New: Back button from location selection
+    if (backToGameDetailsFromLocationSelectBtn) {
+        backToGameDetailsFromLocationSelectBtn.addEventListener('click', () => {
+            showScreen(gameDetailsScreen);
+        });
+    }
+
+    // Service Worker registration
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.register('./service-worker.js'); // Adjusted path for GitHub Pages
+            console.log('Service Worker registered with scope:', registration.scope);
+        } catch (error) {
+            console.error('Service Worker registration failed:', error);
+        }
+    }
 
     const storedTeamId = localStorage.getItem('currentTeamId');
     if (storedTeamId) {
@@ -257,7 +205,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (currentTeam.current_trial_id) {
                 await displayCurrentTrial();
             } else if (currentTeam.current_location_id) {
-                await displayLocationNarrative(currentLocations[currentLocationIndex]);
+                const currentLoc = currentLocations.find(loc => loc.id === currentTeam.current_location_id);
+                if (currentLoc) {
+                    // Check if location has GPS coordinates and if arrival is pending
+                    if (currentLoc.latitude && currentLoc.longitude && !currentTeam.progress_log.some(log => log.location_id === currentLoc.id && log.event === 'location_arrived')) {
+                        await checkLocationArrival(currentLoc); // Check arrival again if resuming at a location with GPS
+                    } else {
+                        // If already arrived or no GPS, just display narrative
+                        await displayLocationNarrative(currentLoc);
+                    }
+                } else {
+                    // Fallback if current_location_id is set but the location itself is not found in the fetched list
+                    showAlert('No se pudo encontrar la ubicación actual. Reiniciando el flujo.', 'warning');
+                    await initializeGameFlowForTeam(); // Re-initialize game flow
+                }
             }
             showAlert('Reanudando juego como equipo: ' + currentTeam.name, 'info'); // Usando 'name' para el equipo
             return;
@@ -270,165 +231,146 @@ document.addEventListener('DOMContentLoaded', async () => {
     showScreen(welcomeScreen);
 });
 
-// --- Welcome Screen Logic ---
-if (startNewGameFlowBtn) {
-    startNewGameFlowBtn.addEventListener('click', () => {
-        showScreen(gameSelectionScreen);
-        fetchActiveGames();
-    });
+// --- Screen Management ---
+function showScreen(screenElement) {
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => screen.classList.add('hidden'));
+    screenElement.classList.remove('hidden');
 }
 
-// --- Supabase Interaction Functions ---
+function showModal(title, message) {
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modal.classList.remove('hidden');
+}
 
+function hideModal() {
+    modal.classList.add('hidden');
+}
+
+function showAlert(message, type = 'info', duration = 5000) {
+    alertMessage.textContent = message;
+    globalAlert.className = `global-alert ${type}`; // Add type class for styling (e.g., 'info', 'warning', 'error', 'success')
+    globalAlert.classList.remove('hidden');
+
+    setTimeout(() => {
+        hideAlert();
+    }, duration);
+}
+
+function hideAlert() {
+    globalAlert.classList.add('hidden');
+}
+
+// --- Game Selection ---
 async function fetchActiveGames() {
-    if (!supabase) {
-        showModal('Error de Conexión', 'La aplicación no pudo conectar con la base de datos. Por favor, recarga la página.');
-        return;
-    }
-
+    showScreen(loadingScreen);
     const { data, error } = await supabase
         .from('games')
         .select('*')
         .eq('is_active', true)
-        .order('title', { ascending: true });
+        .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching active games:', error);
-        showModal('Error', 'No pudimos cargar los juegos activos. Por favor, intenta de nuevo más tarde. ' + error.message);
+        console.error('Error fetching games:', error);
+        showModal('Error', 'No se pudieron cargar los juegos disponibles. ' + error.message);
+        showScreen(welcomeScreen); // Go back to welcome screen on error
         return;
     }
 
     gameList.innerHTML = '';
     if (data.length === 0) {
-        gameList.innerHTML = '<p class="info-message">No hay juegos activos disponibles en este momento. ¡Vuelve pronto!</p>';
+        gameList.innerHTML = '<p>No hay juegos activos disponibles en este momento. Inténtalo más tarde.</p>';
+        showScreen(gameSelectionScreen);
         return;
     }
 
     data.forEach(game => {
         const gameCard = document.createElement('div');
         gameCard.className = 'game-card';
-        gameCard.dataset.gameId = game.id;
         gameCard.innerHTML = `
-            <h3>${game.title}</h3>
+            <h3>${game.name}</h3>
             <p>${game.description}</p>
-            <button class="btn btn-primary select-game-btn" data-game-id="${game.id}">Seleccionar</button>
+            <button class="btn btn-secondary select-game-btn" data-game-id="${game.id}">Seleccionar</button>
         `;
         gameList.appendChild(gameCard);
     });
 
     document.querySelectorAll('.select-game-btn').forEach(button => {
-        button.addEventListener('click', async (e) => {
+        button.addEventListener('click', (e) => {
             const gameId = e.target.dataset.gameId;
-            await displayGameDetails(gameId);
+            const selectedGame = data.find(g => g.id === gameId);
+            displayGameDetails(selectedGame);
         });
     });
+
+    showScreen(gameSelectionScreen);
 }
 
-async function displayGameDetails(gameId) {
-    const { data: game, error } = await supabase
-        .from('games')
-        .select('*')
-        .eq('id', gameId)
-        .single();
-
-    if (error) {
-        console.error('Error fetching game details:', error);
-        showModal('Error', 'No pudimos cargar los detalles del juego. ' + error.message);
-        return;
-    }
-
+function displayGameDetails(game) {
     currentGame = game;
-    gameDetailTitle.textContent = currentGame.title;
-    gameDetailDescription.textContent = currentGame.description;
-    gameDetailMechanics.textContent = currentGame.mechanics;
-    gameDetailInitialNarrative.textContent = currentGame.initial_narrative;
+    gameDetailTitle.textContent = game.name;
+    gameDetailDescription.textContent = game.description;
+    gameDetailMechanics.textContent = game.mechanics || 'No hay mecánicas adicionales especificadas.';
+    gameDetailInitialNarrative.textContent = game.initial_narrative || 'Comienza una emocionante aventura.';
 
-    gameDetailMedia.innerHTML = ''; // Clear previous media
-    if (currentGame.image_url) {
+    // Display game media (image/audio)
+    gameDetailMedia.innerHTML = '';
+    if (game.image_url) {
         const img = document.createElement('img');
-        img.src = currentGame.image_url;
-        img.alt = `Imagen de ${currentGame.title}`;
-        img.classList.add('narrative-image');
+        img.src = game.image_url;
+        img.alt = 'Imagen del juego';
+        img.className = 'narrative-image';
         gameDetailMedia.appendChild(img);
     }
-    if (currentGame.audio_url) {
+    if (game.audio_url) {
         const audio = document.createElement('audio');
         audio.controls = true;
-        audio.src = currentGame.audio_url;
-        audio.classList.add('narrative-audio');
+        audio.src = game.audio_url;
         gameDetailMedia.appendChild(audio);
     }
 
     showScreen(gameDetailsScreen);
 }
 
-// Handle team creation/selection and then start game
-if (startGameBtn) {
-    startGameBtn.addEventListener('click', async () => {
-        const teamName = teamNameInput.value.trim();
-        if (!teamName) {
-            showAlert('Por favor, introduce un nombre para tu equipo.', 'warning');
-            return;
-        }
+async function createAndStartGame() {
+    const teamName = teamNameInput.value.trim();
+    if (!teamName) {
+        showAlert('Por favor, introduce un nombre para tu equipo.', 'warning');
+        return;
+    }
 
-        if (!currentGame) {
-            showAlert('Error: No hay juego seleccionado.', 'error');
-            return;
-        }
+    if (!currentGame) {
+        showAlert('Error: No se ha seleccionado ningún juego.', 'error');
+        return;
+    }
 
-        // 1. Intentar encontrar el equipo usando el nombre de columna 'name'
-        let { data: existingTeam, error: teamCheckError } = await supabase
-            .from('teams')
-            .select('id')
-            .eq('name', teamName) // Usando 'name' para el equipo
-            .eq('game_id', currentGame.id)
-            .single();
+    // Create a new team entry
+    const { data, error } = await supabase
+        .from('teams')
+        .insert({
+            name: teamName,
+            game_id: currentGame.id,
+            start_time: new Date().toISOString(),
+            last_activity: new Date().toISOString(),
+            status: 'active',
+            total_score: 0,
+            total_time_seconds: 0,
+            hints_used_global: 0,
+            hints_used_per_trial: [],
+            progress_log: []
+        })
+        .select()
+        .single();
 
-        if (teamCheckError && teamCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-            showAlert('Error al verificar equipo: ' + teamCheckError.message, 'error');
-            console.error('Error checking existing team:', teamCheckError);
-            return;
-        }
+    if (error) {
+        console.error('Error creating team:', error);
+        showModal('Error', 'No se pudo crear el equipo. ' + error.message);
+        return;
+    }
 
-        if (existingTeam) {
-            showAlert(`El equipo "${teamName}" ya existe para este juego. Por favor, elige otro nombre.`, 'warning');
-            return;
-        } else {
-            // 2. Si el equipo NO existe, crearlo, usando 'name'
-            const { data: newTeam, error: createError } = await supabase
-                .from('teams')
-                .insert({
-                    name: teamName, // Usando 'name' para el equipo
-                    game_id: currentGame.id,
-                    current_location_id: null,
-                    current_trial_id: null,
-                    start_time: new Date().toISOString(),
-                    last_trial_start_time: null,
-                    hints_used_global: 0,
-                    hints_used_per_trial: [],
-                    total_time_seconds: 0,
-                    total_score: 0,
-                    progress_log: [],
-                    last_activity: new Date().toISOString()
-                })
-                .select()
-                .single();
-
-            if (createError) {
-                showAlert('Error al crear el equipo: ' + createError.message, 'error');
-                console.error('Error al crear el equipo:', createError);
-                return;
-            }
-            currentTeam = newTeam;
-            showAlert(`Equipo "${teamName}" creado con éxito.`, 'success');
-        }
-
-        // If we reach here, currentTeam is correctly set (either a new one created).
-        // Now, proceed to actually start the game flow.
-        await initializeGameFlowForTeam();
-    });
-} else {
-    console.warn('Botón de Iniciar Juego (#start-game-btn) no encontrado.');
+    currentTeam = data;
+    await initializeGameFlowForTeam();
 }
 
 async function initializeGameFlowForTeam() {
@@ -458,49 +400,68 @@ async function initializeGameFlowForTeam() {
         return;
     }
 
-    // Set initial game state for the team in DB
-    currentLocationIndex = 0; // Start at the first location
-    currentTrialIndex = 0;    // Reset trial index for new game flow
+    // Determine initial flow based on adventure_type
+    const adventureType = currentGame.adventure_type || 'linear'; // Default to 'linear' if not specified
 
-    const { error: updateTeamError } = await supabase
-        .from('teams')
-        .update({
-            current_location_id: currentLocations[0].id,
-            current_trial_id: null, // Will be set when first trial starts
-            last_activity: new Date().toISOString(),
-            start_time: new Date().toISOString(), // Ensure start_time is updated for new game sessions
-            // Reset progression stats for a new game
-            total_time_seconds: 0,
-            total_score: 0,
-            hints_used_global: 0,
-            hints_used_per_trial: [],
-            progress_log: [],
-        })
-        .eq('id', currentTeam.id);
-
-    if (updateTeamError) {
-        console.error('Error updating team on game start:', updateTeamError);
-        showAlert('Error al preparar el equipo para el juego.', 'error');
-        return;
-    }
-    // Update local currentTeam object to reflect the changes for current game session
-    currentTeam.current_location_id = currentLocations[0].id;
-    currentTeam.current_trial_id = null;
-    currentTeam.start_time = new Date().toISOString();
+    // Reset general game state for a new session
     currentTeam.total_time_seconds = 0;
     currentTeam.total_score = 0;
     currentTeam.hints_used_global = 0;
     currentTeam.hints_used_per_trial = [];
     currentTeam.progress_log = [];
 
-
-    gameStartTime = new Date(currentTeam.start_time).getTime(); // Initialize global game start time
+    // Reset timers
+    gameStartTime = new Date().getTime(); // Initialize global game start time
     startGlobalTimer(); // Start the main game timer
     currentScoreDisplay.textContent = currentTeam.total_score; // Update score display
 
-    showScreen(gameActiveScreen);
-    await displayLocationNarrative(currentLocations[0]); // Display first location narrative
+    let initialLocationId = null;
+
+    if (adventureType === 'linear') {
+        currentLocationIndex = 0; // Start at the first location
+        initialLocationId = currentLocations[0].id;
+        showScreen(gameActiveScreen); // Go directly to active game screen
+        await displayLocationNarrative(currentLocations[0]); // Display first location narrative
+    } else if (adventureType === 'selectable') {
+        currentLocationIndex = -1; // Indicate no specific location is active yet
+        initialLocationId = null; // No initial location set yet, user will choose
+        await displayLocationSelectionScreen(); // Show location selection screen
+    } else {
+        // Fallback for unknown adventure type
+        showAlert(`Tipo de aventura desconocido: ${adventureType}. Asumiendo lineal.`, 'warning');
+        currentLocationIndex = 0;
+        initialLocationId = currentLocations[0].id;
+        showScreen(gameActiveScreen);
+        await displayLocationNarrative(currentLocations[0]);
+    }
+
+    // Update initial team state in DB
+    const { error: updateTeamError } = await supabase
+        .from('teams')
+        .update({
+            current_location_id: initialLocationId, // Will be null for selectable initially
+            current_trial_id: null,
+            last_activity: new Date().toISOString(),
+            start_time: new Date().toISOString(),
+            total_time_seconds: currentTeam.total_time_seconds,
+            total_score: currentTeam.total_score,
+            hints_used_global: currentTeam.hints_used_global,
+            hints_used_per_trial: currentTeam.hints_used_per_trial,
+            progress_log: currentTeam.progress_log,
+        })
+        .eq('id', currentTeam.id);
+
+    if (updateTeamError) {
+        console.error('Error al preparar el equipo para el juego:', updateTeamError);
+        showAlert('Error al preparar el equipo para el juego.', 'error');
+        return;
+    }
+    // Update local currentTeam object to reflect the changes
+    currentTeam.current_location_id = initialLocationId;
+    currentTeam.current_trial_id = null;
+    currentTeam.start_time = new Date().toISOString(); // Re-set start time for fresh game
 }
+
 
 async function loadTeamState(teamId) {
     const { data, error } = await supabase
@@ -513,7 +474,7 @@ async function loadTeamState(teamId) {
         .single();
 
     if (error) {
-        console.error('Error loading team state:', error);
+        console.error('Error al cargar estado del equipo:', error);
         showAlert('Error al cargar estado del equipo: ' + error.message, 'error');
         return false;
     }
@@ -529,21 +490,42 @@ async function loadTeamState(teamId) {
             .eq('game_id', currentGame.id)
             .order('order_index', { ascending: true }); // Usando 'order_index' para locations
         if (locError) {
-            console.error('Error fetching locations for loaded game:', locError);
-            showAlert('Error al cargar ubicaciones para juego reanudado.', 'error');
+            console.error('Error al cargar ubicaciones para juego reanudado:', locError);
+            showAlert('Error al cargar ubicaciones para juego reanudada.', 'error');
             return false;
         }
         currentLocations = locations;
 
-        // Determine current location index
-        currentLocationIndex = currentLocations.findIndex(loc => loc.id === currentTeam.current_location_id);
-        if (currentLocationIndex === -1 && currentLocations.length > 0) currentLocationIndex = 0;
-        else if (currentLocationIndex === -1) { // No current location or no locations in game
-            console.warn("No current location found or no locations exist. Starting from beginning.");
-            currentLocationIndex = 0;
+        // Determine current location index based on adventure_type
+        const adventureType = currentGame.adventure_type || 'linear';
+
+        if (adventureType === 'linear') {
+            currentLocationIndex = currentLocations.findIndex(loc => loc.id === currentTeam.current_location_id);
+            if (currentLocationIndex === -1 && currentLocations.length > 0) currentLocationIndex = 0;
+            else if (currentLocationIndex === -1) { // No current location or no locations in game
+                console.warn("No se encontró la ubicación actual o no existen ubicaciones para el juego lineal. Comenzando desde el principio.");
+                currentLocationIndex = 0;
+            }
+        } else { // 'selectable' or other
+            // For selectable, just find the current location by ID, index is less critical for flow
+            currentLocationIndex = currentLocations.findIndex(loc => loc.id === currentTeam.current_location_id);
+            if (currentLocationIndex === -1 && currentLocations.length > 0) {
+                // If no specific location was set, it means they are at selection screen or just started
+                console.warn("No se encontró la ubicación actual para el juego 'seleccionable'. El usuario podría necesitar seleccionar una.");
+                // If the game is selectable and no location is set, the index can remain -1,
+                // and the main init logic will display the selection screen.
+                // If there are no locations in a selectable game, it's an issue.
+                if (currentLocations.length === 0) {
+                    showModal('Juego Vacío', 'Este juego no tiene ubicaciones configuradas. Contacta al administrador.');
+                    return false;
+                }
+            } else if (currentLocationIndex === -1) { // No locations at all
+                console.warn("No se encontraron ubicaciones para el juego.");
+                return false;
+            }
         }
 
-        // Fetch trials for the current location, using 'order_index' for trials
+        // Fetch trials for the current location if one is set
         if (currentTeam.current_location_id) {
             const { data: trials, error: trialError } = await supabase
                 .from('trials')
@@ -551,7 +533,7 @@ async function loadTeamState(teamId) {
                 .eq('location_id', currentTeam.current_location_id)
                 .order('order_index', { ascending: true }); // Usando 'order_index' para trials
             if (trialError) {
-                console.error('Error fetching trials for loaded location:', trialError);
+                console.error('Error al cargar pruebas para ubicación reanudada:', trialError);
                 showAlert('Error al cargar pruebas para ubicación reanudada.', 'error');
                 return false;
             }
@@ -562,15 +544,14 @@ async function loadTeamState(teamId) {
             if (currentTrialIndex === -1 && currentTrials.length > 0) {
                 // If trial ID is null or not found, it means we might be at a location narrative or first trial
                 currentTrialIndex = 0;
-            } else if (currentTrialIndex === -1) {
-                console.warn("No current trial found or no trials exist in location.");
+            } else if (currentTrialIndex === -1) { // No trials in location
+                console.warn("No se encontró la prueba actual o no existen pruebas en la ubicación.");
                 currentTrialIndex = 0;
             }
         } else {
             currentTrials = []; // No current location, so no trials loaded
             currentTrialIndex = 0;
         }
-
 
         gameStartTime = new Date(currentTeam.start_time).getTime();
         currentScoreDisplay.textContent = currentTeam.total_score;
@@ -583,891 +564,754 @@ async function loadTeamState(teamId) {
 // --- Game Flow and Navigation ---
 
 async function displayLocationNarrative(location) {
-    // Hide all trial-specific sections
-    textTrialSection.classList.add('hidden');
-    qrTrialSection.classList.add('hidden');
-    gpsTrialSection.classList.add('hidden');
-    locationNarrativeSection.classList.remove('hidden'); // Show location narrative section
+    if (!location) {
+        console.error('No location provided for displayLocationNarrative.');
+        showAlert('Error: No se pudo cargar la narrativa de la ubicación.', 'error');
+        return;
+    }
 
-    // Update location narrative content
-    locationNarrativeDisplay.innerHTML = `
-        <h2>${location.name}</h2>
-        <p>${location.initial_narrative}</p>
-    `;
-    locationMedia.innerHTML = ''; // Clear previous media
+    showScreen(gameActiveScreen); // Ensure we are on the active game screen
+
+    gameProgressDisplay.textContent = `Ubicación: ${location.name}`;
+    locationNarrativeDisplay.textContent = location.narrative;
+
+    // Display location media (image/audio/video)
+    locationMedia.innerHTML = '';
     if (location.image_url) {
         const img = document.createElement('img');
         img.src = location.image_url;
         img.alt = `Imagen de ${location.name}`;
-        img.classList.add('narrative-image');
+        img.className = 'narrative-image';
         locationMedia.appendChild(img);
     }
     if (location.audio_url) {
         const audio = document.createElement('audio');
         audio.controls = true;
         audio.src = location.audio_url;
-        audio.classList.add('narrative-audio');
         locationMedia.appendChild(audio);
-        audio.play().catch(e => console.error("Error playing location audio:", e));
+    }
+    if (location.video_url) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = location.video_url;
+        video.className = 'narrative-video';
+        locationMedia.appendChild(video);
     }
 
+    // Hide trial elements
+    trialScreen.classList.add('hidden');
+    feedbackScreen.classList.add('hidden');
+    locationNarrativeSection.classList.remove('hidden');
 
-    // Check if location has GPS coordinates for arrival
-    if (location.latitude && location.longitude && typeof location.tolerance_meters === 'number') {
-        locationArrivalMapContainer.classList.remove('hidden');
-        locationArrivalMessage.classList.remove('hidden');
-        startLocationTrialsBtn.disabled = true; // Disable button until arrived
-        locationArrivalMessage.textContent = 'Dirígete a la ubicación para continuar...';
-        initializeLocationArrivalMap(location.latitude, location.longitude, location.tolerance_meters);
+    // Check if location has GPS coordinates
+    if (location.latitude && location.longitude) {
+        await checkLocationArrival(location);
     } else {
-        // If no GPS coordinates for location, automatically enable starting trials
+        // If no GPS, automatically allow starting trials
         locationArrivalMapContainer.classList.add('hidden');
-        locationArrivalMessage.classList.add('hidden');
-        stopLocationGpsWatch(); // Ensure no previous watch is active
-        startLocationTrialsBtn.disabled = false; // Enable button immediately
+        locationArrivalMessage.textContent = '¡Has llegado a tu destino!';
+        startLocationTrialsBtn.classList.remove('hidden');
+    }
+
+    // Update team's current_location_id if not already set or changed
+    if (currentTeam.current_location_id !== location.id) {
+        const { error: updateError } = await supabase
+            .from('teams')
+            .update({
+                current_location_id: location.id,
+                current_trial_id: null,
+                last_activity: new Date().toISOString(),
+                progress_log: [...currentTeam.progress_log, {
+                    timestamp: new Date().toISOString(),
+                    event: 'location_narrative_displayed',
+                    location_id: location.id,
+                    location_name: location.name
+                }]
+            })
+            .eq('id', currentTeam.id);
+
+        if (updateError) {
+            console.error('Error updating current location for team:', updateError);
+            showAlert('Error al actualizar la ubicación actual del equipo.', 'error');
+        } else {
+            currentTeam.current_location_id = location.id; // Update local state
+            currentTeam.current_trial_id = null;
+            currentTeam.progress_log.push({
+                timestamp: new Date().toISOString(),
+                event: 'location_narrative_displayed',
+                location_id: location.id,
+                location_name: location.name
+            });
+        }
     }
 }
 
-async function displayCurrentTrial() {
-    stopLocationGpsWatch(); // Ensure location GPS watch is stopped when trials start
-    locationArrivalMapContainer.classList.add('hidden'); // Hide location map
-    locationArrivalMessage.classList.add('hidden');
 
-    if (!currentGame || !currentTeam || currentLocations.length === 0) {
-        showModal('Error de Juego', 'El estado del juego es incorrecto. Por favor, reinicia la aplicación.');
+async function displayCurrentTrial() {
+    if (currentTrialIndex >= currentTrials.length) {
+        console.log('Todas las pruebas de la ubicación completadas.');
+        return await completeLocation();
+    }
+
+    const trial = currentTrials[currentTrialIndex];
+    if (!trial) {
+        console.error('Trial not found at index:', currentTrialIndex);
+        showModal('Error', 'No se pudo cargar la prueba actual. Por favor, contacta al administrador.');
         return;
     }
 
-    const currentTrial = currentTrials[currentTrialIndex];
-    if (!currentTrial) {
-        // All trials for this location completed
-        currentLocationIndex++; // Move to next location
+    // Reset trial UI
+    answerInput.value = '';
+    answerInput.classList.remove('hidden');
+    submitAnswerBtn.classList.remove('hidden');
+    qrReaderContainer.classList.add('hidden');
+    qrCodeValueDisplay.textContent = '';
+    qrSubmitBtn.classList.add('hidden');
+    qrReaderVideo.srcObject = null; // Clear video stream
+    stopQrScanner(); // Ensure scanner is stopped
+    hintBtn.classList.remove('hidden'); // Show hint button by default
+
+    // Hide location narrative elements
+    locationNarrativeSection.classList.add('hidden');
+    // Hide arrival map/message if they were visible
+    locationArrivalMapContainer.classList.add('hidden');
+    locationArrivalMessage.textContent = '';
+    startLocationTrialsBtn.classList.add('hidden');
+
+
+    showScreen(trialScreen);
+    gameProgressDisplay.textContent = `Ubicación: ${currentLocations[currentLocationIndex].name} - Prueba ${currentTrialIndex + 1}/${currentTrials.length}`;
+    trialQuestionDisplay.innerHTML = trial.question_text;
+
+    // Display trial media (image/audio/video)
+    trialMedia.innerHTML = '';
+    if (trial.image_url) {
+        const img = document.createElement('img');
+        img.src = trial.image_url;
+        img.alt = 'Imagen de la prueba';
+        img.className = 'narrative-image';
+        trialMedia.appendChild(img);
+    }
+    if (trial.audio_url) {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = trial.audio_url;
+        trialMedia.appendChild(audio);
+    }
+    if (trial.video_url) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = trial.video_url;
+        video.className = 'narrative-video';
+        trialMedia.appendChild(video);
+    }
+
+    // Adjust UI based on trial type
+    if (trial.type === 'qr_scan') {
+        answerInput.classList.add('hidden');
+        submitAnswerBtn.classList.add('hidden');
+        qrReaderContainer.classList.remove('hidden');
+        qrSubmitBtn.classList.remove('hidden');
+        qrReaderBtn.classList.remove('hidden'); // Ensure QR scan button is visible
+        qrCodeValueDisplay.textContent = 'Escaneando QR...'; // Initial message
+    } else {
+        qrReaderContainer.classList.add('hidden');
+        qrReaderBtn.classList.add('hidden');
+        qrSubmitBtn.classList.add('hidden');
+    }
+
+    // Manage trial timer
+    clearInterval(trialTimerInterval); // Clear any previous trial timer
+    currentTrialDuration = trial.time_limit_seconds || 0; // Set duration from DB
+    if (currentTrialDuration > 0) {
+        trialTimerDisplay.classList.remove('hidden');
+        startTrialTimer();
+    } else {
+        trialTimerDisplay.classList.add('hidden');
+    }
+
+    // Update current trial ID in DB
+    const { error: updateError } = await supabase
+        .from('teams')
+        .update({
+            current_trial_id: trial.id,
+            last_activity: new Date().toISOString(),
+            progress_log: [...currentTeam.progress_log, {
+                timestamp: new Date().toISOString(),
+                event: 'trial_displayed',
+                location_id: currentTeam.current_location_id,
+                location_name: currentLocations[currentLocationIndex].name,
+                trial_id: trial.id,
+                trial_question: trial.question_text
+            }]
+        })
+        .eq('id', currentTeam.id);
+
+    if (updateError) {
+        console.error('Error updating current trial for team:', updateError);
+        showAlert('Error al actualizar la prueba actual del equipo.', 'error');
+    } else {
+        currentTeam.current_trial_id = trial.id; // Update local state
+        currentTeam.progress_log.push({
+            timestamp: new Date().toISOString(),
+            event: 'trial_displayed',
+            location_id: currentTeam.current_location_id,
+            location_name: currentLocations[currentLocationIndex].name,
+            trial_id: trial.id,
+            trial_question: trial.question_text
+        });
+    }
+}
+
+async function submitAnswer(qrAnswer = null) {
+    const trial = currentTrials[currentTrialIndex];
+    if (!trial) {
+        showAlert('Error: No hay prueba activa para responder.', 'error');
+        return;
+    }
+
+    const playerAnswer = qrAnswer || answerInput.value.trim();
+    if (!playerAnswer) {
+        showAlert('Por favor, ingresa tu respuesta.', 'warning');
+        return;
+    }
+
+    const isCorrect = playerAnswer.toLowerCase() === trial.correct_answer.toLowerCase();
+    let scoreChange = 0;
+    let message = '';
+    let details = '';
+
+    if (isCorrect) {
+        scoreChange = trial.points;
+        message = '¡Respuesta Correcta!';
+        details = 'Has ganado ' + trial.points + ' puntos.';
+    } else {
+        scoreChange = -trial.penalty_points;
+        message = 'Respuesta Incorrecta.';
+        details = 'Has perdido ' + trial.penalty_points + ' puntos.';
+    }
+
+    // Deduct points for hints used in this trial
+    const hintsUsedInTrial = (currentTeam.hints_used_per_trial || []).filter(h => h.trial_id === trial.id).length;
+    if (hintsUsedInTrial > 0) {
+        scoreChange -= (hintsUsedInTrial * trial.hint_penalty_points);
+        details += ` Se deducen ${hintsUsedInTrial * trial.hint_penalty_points} puntos por ${hintsUsedInTrial} pista(s) utilizada(s).`;
+    }
+
+    currentTeam.total_score = Math.max(0, currentTeam.total_score + scoreChange); // Ensure score doesn't go below zero
+    currentScoreDisplay.textContent = currentTeam.total_score;
+
+    // Log the answer
+    currentTeam.progress_log.push({
+        timestamp: new Date().toISOString(),
+        event: 'trial_answered',
+        location_id: currentTeam.current_location_id,
+        location_name: currentLocations[currentLocationIndex].name,
+        trial_id: trial.id,
+        trial_question: trial.question_text,
+        player_answer: playerAnswer,
+        correct_answer: trial.correct_answer,
+        is_correct: isCorrect,
+        score_change: scoreChange,
+        total_score_after: currentTeam.total_score,
+        time_taken_seconds: trial.time_limit_seconds > 0 ? (currentTrialDuration - parseTimeToSeconds(trialTimerDisplay.textContent)) : null,
+        hints_used_in_trial: hintsUsedInTrial
+    });
+
+    // Update team state in DB
+    const { error: updateError } = await supabase
+        .from('teams')
+        .update({
+            total_score: currentTeam.total_score,
+            last_activity: new Date().toISOString(),
+            progress_log: currentTeam.progress_log
+        })
+        .eq('id', currentTeam.id);
+
+    if (updateError) {
+        console.error('Error updating team score and progress:', updateError);
+        showAlert('Error al guardar el progreso del equipo.', 'error');
+    }
+
+    // Stop trial timer
+    clearInterval(trialTimerInterval);
+    trialTimerDisplay.classList.add('hidden');
+
+    displayFeedback(message, details, scoreChange);
+}
+
+function displayFeedback(message, details, scoreChange) {
+    feedbackMessageDisplay.textContent = message;
+    feedbackDetailsDisplay.textContent = details;
+    feedbackScoreChange.textContent = `Puntuación: ${scoreChange >= 0 ? '+' : ''}${scoreChange} puntos`;
+    feedbackScoreChange.style.color = scoreChange >= 0 ? 'green' : 'red';
+    showScreen(feedbackScreen);
+}
+
+async function requestHint() {
+    const trial = currentTrials[currentTrialIndex];
+    if (!trial || !trial.hint_text) {
+        showAlert('No hay pistas disponibles para esta prueba.', 'info');
+        return;
+    }
+
+    currentTeam.hints_used_global = (currentTeam.hints_used_global || 0) + 1;
+    currentTeam.hints_used_per_trial = currentTeam.hints_used_per_trial || [];
+    currentTeam.hints_used_per_trial.push({
+        trial_id: trial.id,
+        timestamp: new Date().toISOString(),
+        penalty: trial.hint_penalty_points
+    });
+
+    // Update hints used in DB
+    const { error: updateError } = await supabase
+        .from('teams')
+        .update({
+            hints_used_global: currentTeam.hints_used_global,
+            hints_used_per_trial: currentTeam.hints_used_per_trial,
+            last_activity: new Date().toISOString()
+        })
+        .eq('id', currentTeam.id);
+
+    if (updateError) {
+        console.error('Error updating hint usage:', updateError);
+        showAlert('Error al guardar el uso de la pista.', 'error');
+    }
+
+    showModal('Pista', trial.hint_text + (trial.hint_penalty_points > 0 ? ` (Te costará ${trial.hint_penalty_points} puntos)` : ''));
+}
+
+async function continueFromFeedback() {
+    currentTrialIndex++;
+    // Reset hints for the current trial as it's completed
+    currentTeam.hints_used_per_trial = (currentTeam.hints_used_per_trial || []).filter(h => h.trial_id !== currentTrials[currentTrialIndex - 1]?.id);
+
+    if (currentTrialIndex < currentTrials.length) {
+        await displayCurrentTrial();
+    } else {
+        await completeLocation();
+    }
+}
+
+async function completeLocation() {
+    showAlert(`Ubicación "${currentLocations[currentLocationIndex].name}" completada.`, 'success');
+
+    // Add location completed log
+    currentTeam.progress_log.push({
+        timestamp: new Date().toISOString(),
+        event: 'location_completed',
+        location_id: currentLocations[currentLocationIndex].id,
+        location_name: currentLocations[currentLocationIndex].name,
+        total_score_after: currentTeam.total_score,
+        total_time_seconds_after: currentTeam.total_time_seconds
+    });
+
+    // Update current_location_id to null and update progress log
+    const { error: updateError } = await supabase
+        .from('teams')
+        .update({
+            current_location_id: null, // Clear current location
+            current_trial_id: null, // Clear current trial
+            last_activity: new Date().toISOString(),
+            progress_log: currentTeam.progress_log
+        })
+        .eq('id', currentTeam.id);
+
+    if (updateError) {
+        console.error('Error updating team state after location completion:', updateError);
+        showAlert('Error al finalizar la ubicación. ' + updateError.message, 'error');
+    }
+
+    // Logic for next location based on adventure_type
+    const adventureType = currentGame.adventure_type || 'linear';
+
+    if (adventureType === 'linear') {
+        currentLocationIndex++;
         if (currentLocationIndex < currentLocations.length) {
             await displayLocationNarrative(currentLocations[currentLocationIndex]);
         } else {
             await completeGame();
         }
+    } else if (adventureType === 'selectable') {
+        // For selectable, go back to location selection screen
+        currentLocationIndex = -1; // No active location
+        await displayLocationSelectionScreen();
+    }
+}
+
+
+async function completeGame() {
+    clearInterval(globalGameTimerInterval); // Stop the global timer
+    currentTeam.total_time_seconds = parseTimeToSeconds(gameTotalTimeDisplay.textContent);
+
+    // Add game completed log
+    currentTeam.progress_log.push({
+        timestamp: new Date().toISOString(),
+        event: 'game_completed',
+        total_score: currentTeam.total_score,
+        total_time_seconds: currentTeam.total_time_seconds
+    });
+
+    const { error: updateError } = await supabase
+        .from('teams')
+        .update({
+            status: 'completed',
+            total_time_seconds: currentTeam.total_time_seconds,
+            last_activity: new Date().toISOString(),
+            progress_log: currentTeam.progress_log,
+            current_location_id: null, // Clear active location
+            current_trial_id: null // Clear active trial
+        })
+        .eq('id', currentTeam.id);
+
+    if (updateError) {
+        console.error('Error updating team status to completed:', updateError);
+        showAlert('Error al finalizar el juego en la base de datos.', 'error');
+    }
+
+    finalScoreDisplay.textContent = currentTeam.total_score;
+    finalTimeDisplay.textContent = formatTime(currentTeam.total_time_seconds);
+
+    await displayRanking();
+    showScreen(finalScreen);
+    localStorage.removeItem('currentTeamId'); // Clear stored team ID
+}
+
+async function displayRanking() {
+    const { data, error } = await supabase
+        .from('teams')
+        .select('name, total_score, total_time_seconds')
+        .eq('game_id', currentGame.id)
+        .eq('status', 'completed')
+        .order('total_score', { ascending: false })
+        .order('total_time_seconds', { ascending: true })
+        .limit(10); // Top 10
+
+    if (error) {
+        console.error('Error fetching rankings:', error);
+        finalRankingList.innerHTML = '<li>Error al cargar el ranking.</li>';
         return;
     }
 
-    // Update current trial ID in team state
+    finalRankingList.innerHTML = '';
+    if (data.length === 0) {
+        finalRankingList.innerHTML = '<li>Nadie ha completado este juego todavía. ¡Sé el primero!</li>';
+        return;
+    }
+
+    data.forEach((team, index) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${index + 1}. ${team.name} - Puntuación: ${team.total_score} - Tiempo: ${formatTime(team.total_time_seconds)}`;
+        finalRankingList.appendChild(listItem);
+    });
+}
+
+async function displayLocationSelectionScreen() {
+    showScreen(locationSelectionScreen);
+    gameSelectionInitialNarrative.textContent = currentGame.initial_narrative;
+    locationListContainer.innerHTML = ''; // Clear previous list
+
+    currentLocations.forEach(location => {
+        const locationCard = document.createElement('div');
+        locationCard.className = 'game-card location-card'; // Reuse game-card styling
+        locationCard.innerHTML = `
+            <h3>${location.name}</h3>
+            <p>${location.description}</p>
+            ${location.image_url ? `<img src="${location.image_url}" alt="Imagen de ${location.name}" class="narrative-image small-img">` : ''}
+            <button class="btn btn-primary select-location-btn" data-location-id="${location.id}">Elegir Ubicación</button>
+        `;
+        locationListContainer.appendChild(locationCard);
+    });
+
+    document.querySelectorAll('.select-location-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const locationId = e.target.dataset.locationId;
+            await selectLocation(locationId);
+        });
+    });
+}
+
+async function selectLocation(locationId) {
+    const selectedLocation = currentLocations.find(loc => loc.id === locationId);
+    if (!selectedLocation) {
+        showAlert('Ubicación no encontrada.', 'error');
+        return;
+    }
+
+    currentLocationIndex = currentLocations.findIndex(loc => loc.id === locationId);
+    if (currentLocationIndex === -1) {
+        console.error('Error: Ubicación seleccionada no encontrada en la lista de ubicaciones cargadas.');
+        showAlert('Error interno al seleccionar ubicación. Por favor, reinicia.', 'error');
+        return;
+    }
+
+    // Update team's current_location_id in DB
     const { error: updateTeamError } = await supabase
         .from('teams')
         .update({
-            current_trial_id: currentTrial.id,
+            current_location_id: selectedLocation.id,
+            current_trial_id: null, // Reset trial for new location
             last_activity: new Date().toISOString(),
-            last_trial_start_time: new Date().toISOString()
+            progress_log: [...currentTeam.progress_log, {
+                timestamp: new Date().toISOString(),
+                event: 'location_selected',
+                location_id: selectedLocation.id,
+                location_name: selectedLocation.name
+            }]
         })
         .eq('id', currentTeam.id);
 
     if (updateTeamError) {
-        console.error('Error updating current_trial_id:', updateTeamError);
-        showAlert('Error al actualizar progreso.', 'error');
+        console.error('Error al actualizar la ubicación actual del equipo:', updateTeamError);
+        showAlert('Error al guardar la ubicación elegida. ' + updateTeamError.message, 'error');
+        return;
     }
-
-    currentTeam.current_trial_id = currentTrial.id;
-    currentTeam.last_trial_start_time = new Date().toISOString();
-
-
-    document.querySelectorAll('.trial-section').forEach(sec => sec.classList.add('hidden'));
-    locationNarrativeSection.classList.add('hidden'); // Hide location narrative section when trial starts
-
-    trialNarrativeDisplay.textContent = currentTrial.narrative;
-    trialImage.src = ''; trialImage.classList.add('hidden');
-    trialAudio.src = ''; trialAudio.classList.add('hidden');
-
-    if (currentTrial.image_url) {
-        trialImage.src = currentTrial.image_url;
-        trialImage.classList.remove('hidden');
-    }
-    if (currentTrial.audio_url) {
-        trialAudio.src = currentTrial.audio_url;
-        trialAudio.classList.remove('hidden');
-        trialAudio.play().catch(e => console.error("Error playing audio:", e));
-    }
-
-    const hintInfo = currentTeam.hints_used_per_trial.find(h => h.trialId === currentTrial.id);
-    const hintsUsed = hintInfo ? hintInfo.count : 0;
-    const hintsRemaining = (currentTrial.hints_count || 0) - hintsUsed;
-
-    // Reset all hint displays and buttons
-    [hintBtn, qrHintBtn, gpsHintBtn].forEach(btn => {
-        if (btn) {
-            btn.classList.add('hidden');
-        }
+    currentTeam.current_location_id = selectedLocation.id; // Update local state
+    currentTeam.current_trial_id = null; // Ensure local state reflects DB
+    currentTeam.progress_log.push({
+        timestamp: new Date().toISOString(),
+        event: 'location_selected',
+        location_id: selectedLocation.id,
+        location_name: selectedLocation.name
     });
 
-    switch (currentTrial.trial_type) { // Usando 'trial_type'
-        case 'QR':
-            qrTrialSection.classList.remove('hidden');
-            qrResultDisplay.textContent = '';
-            qrScannerContainer.classList.remove('hidden');
-            if (qrHintsRemainingDisplay) qrHintsRemainingDisplay.textContent = hintsRemaining;
-            if (qrHintCostDisplay) qrHintCostDisplay.textContent = currentTrial.hints_cost || 0;
-            if (qrHintBtn && hintsRemaining > 0) qrHintBtn.classList.remove('hidden');
-            break;
-        case 'GPS':
-            gpsTrialSection.classList.remove('hidden');
-            gpsMapContainer.classList.remove('hidden');
-            // Usando 'latitude', 'longitude', 'tolerance_meters'
-            initializePlayerMap(currentTrial.latitude, currentTrial.longitude, currentTrial.tolerance_meters);
-            if (gpsHintsRemainingDisplay) gpsHintsRemainingDisplay.textContent = hintsRemaining;
-            if (gpsHintCostDisplay) gpsHintCostDisplay.textContent = currentTrial.hints_cost || 0;
-            if (gpsHintBtn && hintsRemaining > 0) gpsHintBtn.classList.remove('hidden');
-            break;
-        case 'TEXT':
-            textTrialSection.classList.remove('hidden');
-            // Usando 'question'
-            textQuestionDisplay.textContent = currentTrial.question;
-            textAnswerInput.value = '';
-            textAnswerInput.classList.remove('hidden');
-            textOptionsContainer.innerHTML = '';
-            textOptionsContainer.classList.add('hidden');
 
-            if (hintsRemainingDisplay) hintsRemainingDisplay.textContent = hintsRemaining;
-            if (hintCostDisplay) hintCostDisplay.textContent = currentTrial.hints_cost || 0;
-            if (hintBtn && hintsRemaining > 0) hintBtn.classList.remove('hidden');
-
-            switch (currentTrial.answer_type) {
-                case 'SINGLE_CHOICE':
-                case 'NUMERIC':
-                    break;
-                case 'MULTIPLE_OPTIONS':
-                    textOptionsContainer.classList.remove('hidden');
-                    textAnswerInput.classList.add('hidden');
-                    // Options en CSV viene como un JSON string, necesitamos parsearlo
-                    try {
-                        const optionsArray = JSON.parse(currentTrial.options);
-                        optionsArray.forEach((option) => {
-                            const btn = document.createElement('button');
-                            btn.className = 'btn btn-option';
-                            btn.textContent = option.trim();
-                            btn.dataset.value = option.trim();
-                            btn.addEventListener('click', (e) => {
-                                textAnswerInput.value = e.target.dataset.value;
-                                validateAnswerBtn.click();
-                            });
-                            textOptionsContainer.appendChild(btn);
-                        });
-                    } catch (e) {
-                        console.error('Error parsing options for TEXT trial:', e);
-                        showAlert('Error cargando opciones de la prueba. Consulta al administrador.', 'error');
-                    }
-                    break;
-                case 'ORDERING':
-                    textOptionsContainer.classList.remove('hidden');
-                    textAnswerInput.classList.add('hidden');
-                    // Options en CSV viene como un JSON string, necesitamos parsearlo
-                    try {
-                        const optionsArray = JSON.parse(currentTrial.options);
-                        optionsArray.forEach((option) => {
-                            const btn = document.createElement('button');
-                            btn.className = 'btn btn-option-ordering';
-                            btn.textContent = option.trim();
-                            btn.dataset.value = option.trim();
-                            btn.addEventListener('click', () => {
-                                if (textAnswerInput.value === '') {
-                                    textAnswerInput.value = btn.dataset.value;
-                                } else {
-                                    textAnswerInput.value += ';' + btn.dataset.value;
-                                }
-                                showAlert(`Añadido: ${btn.dataset.value}`, 'info');
-                            });
-                            textOptionsContainer.appendChild(btn);
-                        });
-                    } catch (e) {
-                        console.error('Error parsing options for TEXT trial:', e);
-                        showAlert('Error cargando opciones de la prueba. Consulta al administrador.', 'error');
-                    }
-
-                    const clearOrderBtn = document.createElement('button');
-                    clearOrderBtn.className = 'btn btn-secondary';
-                    clearOrderBtn.textContent = 'Limpiar Orden';
-                    clearOrderBtn.addEventListener('click', () => {
-                        textAnswerInput.value = '';
-                        showAlert('Orden limpiado.', 'info');
-                    });
-                    textOptionsContainer.appendChild(clearOrderBtn);
-                    break;
-            }
-            break;
-        default:
-            showAlert('Tipo de prueba no reconocido: ' + currentTrial.trial_type, 'error');
-            showModal('Error de Prueba', `El tipo de prueba '${currentTrial.trial_type}' no es reconocido. Contacta al administrador.`);
-            break;
-    }
-    startTrialTimer();
+    showScreen(gameActiveScreen); // Switch to the active game screen
+    await displayLocationNarrative(selectedLocation);
 }
 
-async function completeTrial(pointsAwarded) {
-    stopTrialTimer();
-    stopGpsWatch(); // Stop GPS for trial
-    stopQrScanner();
-
-    const timeTaken = Math.floor((Date.now() - trialStartTime) / 1000);
-    let finalTrialScore = Math.max(0, pointsAwarded - timeTaken);
-
-    const currentTrial = currentTrials[currentTrialIndex];
-    const hintsUsedInThisTrial = currentTeam.hints_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
-    finalTrialScore -= (hintsUsedInThisTrial * (currentTrial.hints_cost || 0));
-    finalTrialScore = Math.max(0, finalTrialScore);
-
-    const progressLogEntry = {
-        trial_id: currentTrial.id,
-        location_id: currentLocations[currentLocationIndex].id,
-        time_taken: timeTaken,
-        score: finalTrialScore,
-        timestamp: new Date().toISOString(),
-        hints_used: hintsUsedInThisTrial
-    };
-
-    const { error } = await supabase
-        .from('teams')
-        .update({
-            total_time_seconds: (currentTeam.total_time_seconds || 0) + timeTaken,
-            total_score: (currentTeam.total_score || 0) + finalTrialScore,
-            progress_log: [...(currentTeam.progress_log || []), progressLogEntry],
-            last_activity: new Date().toISOString()
-        })
-        .eq('id', currentTeam.id);
-
-    if (error) {
-        console.error('Error updating team progress:', error);
-        showAlert('Error al guardar el progreso.', 'error');
-    } else {
-        currentTeam.total_time_seconds = (currentTeam.total_time_seconds || 0) + timeTaken;
-        currentTeam.total_score = (currentTeam.total_score || 0) + finalTrialScore;
-        currentTeam.progress_log = [...(currentTeam.progress_log || []), progressLogEntry];
-        currentScoreDisplay.textContent = currentTeam.total_score;
-    }
-
-    feedbackMessage.textContent = '¡Prueba Completada!';
-    feedbackScore.textContent = `Puntos: ${finalTrialScore} (${pointsAwarded} base - ${timeTaken}s - ${hintsUsedInThisTrial * (currentTrial.hints_cost || 0)} pts por pistas)`;
-    showScreen(feedbackScreen);
-}
-
-async function continueFromFeedback() {
-    currentTrialIndex++;
-    await displayCurrentTrial(); // This function handles checking if location is complete or game is complete
-}
-
-async function completeGame() {
-    stopGlobalTimer();
-    stopLocationGpsWatch(); // Ensure location GPS is stopped on game completion
-    stopGpsWatch(); // Ensure trial GPS is stopped
-    stopQrScanner();
-
-    const totalGameTimeSeconds = currentTeam.total_time_seconds;
-    const finalScoreValue = currentTeam.total_score;
-
-    const { error: rankingError } = await supabase
-        .from('rankings')
-        .insert({
-            game_id: currentGame.id,
-            team_id: currentTeam.id,
-            final_score: finalScoreValue,
-            completion_time: totalGameTimeSeconds,
-            completion_date: new Date().toISOString()
-        });
-
-    if (rankingError) {
-        console.error('Error saving ranking:', rankingError);
-        showAlert('Error al guardar el ranking final. ' + rankingError.message, 'error');
-    } else {
-        showAlert('¡Juego completado con éxito! Tu ranking ha sido guardado.', 'success');
-    }
-
-    finalGameTitle.textContent = currentGame.title;
-    finalScore.textContent = finalScoreValue;
-    finalTime.textContent = formatTime(totalGameTimeSeconds);
-    showScreen(gameCompletionScreen);
-
-    localStorage.removeItem('currentTeamId');
-    currentTeam = null;
-    currentGame = null;
-    currentLocations = [];
-    currentTrials = [];
-    currentLocationIndex = 0;
-    currentTrialIndex = 0;
-}
 
 // --- Timers ---
 function startGlobalTimer() {
-    if (gameTimerInterval) clearInterval(gameTimerInterval);
-    gameTimerInterval = setInterval(() => {
-        const elapsedSinceGameStart = Math.floor((Date.now() - gameStartTime) / 1000);
-        gameTotalTimeDisplay.textContent = 'Tiempo Total: ' + formatTime(elapsedSinceGameStart);
+    clearInterval(globalGameTimerInterval); // Clear any existing timer
+    globalGameTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((new Date().getTime() - gameStartTime) / 1000);
+        gameTotalTimeDisplay.textContent = formatTime(elapsed);
+        currentTeam.total_time_seconds = elapsed; // Keep local state updated
     }, 1000);
-}
-
-function stopGlobalTimer() {
-    if (gameTimerInterval) {
-        clearInterval(gameTimerInterval);
-        gameTimerInterval = null;
-    }
 }
 
 function startTrialTimer() {
-    trialStartTime = Date.now();
-    if (trialTimerInterval) clearInterval(trialTimerInterval);
+    let timeLeft = currentTrialDuration;
+    trialTimerDisplay.textContent = formatTime(timeLeft); // Initial display
+
+    clearInterval(trialTimerInterval);
     trialTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - trialStartTime) / 1000);
-        trialTimerDisplay.textContent = 'Tiempo Prueba: ' + formatTime(elapsed);
+        timeLeft--;
+        trialTimerDisplay.textContent = formatTime(timeLeft);
+        if (timeLeft <= 0) {
+            clearInterval(trialTimerInterval);
+            showAlert('¡Tiempo agotado para esta prueba!', 'warning', 3000);
+            submitAnswer('TIME_EXPIRED'); // Submit a special answer for time out
+        }
     }, 1000);
 }
 
-function stopTrialTimer() {
-    if (trialTimerInterval) {
-        clearInterval(trialTimerInterval);
-        trialTimerInterval = null;
-    }
-}
-
 function resumeGameTimers() {
-    startGlobalTimer();
+    if (currentTeam && currentTeam.start_time) {
+        gameStartTime = new Date(currentTeam.start_time).getTime();
+        startGlobalTimer();
+        // If resuming within a trial, also resume its timer
+        if (currentTeam.current_trial_id && currentTrialIndex !== -1 && currentTrials[currentTrialIndex] && currentTrials[currentTrialIndex].time_limit_seconds > 0) {
+            const trial = currentTrials[currentTrialIndex];
+            // Calculate remaining time. This assumes `progress_log` contains the `trial_displayed` event.
+            // A more robust solution might save `trial_start_time` in the team state directly.
+            const trialStartLog = currentTeam.progress_log.findLast(log =>
+                log.event === 'trial_displayed' && log.trial_id === trial.id
+            );
 
-    if (currentTeam && currentTeam.current_trial_id && currentTeam.last_trial_start_time) {
-        trialStartTime = new Date(currentTeam.last_trial_start_time).getTime();
-        startTrialTimer();
-    }
-}
-
-// --- Answer Validation and Hints ---
-if (validateAnswerBtn) {
-    validateAnswerBtn.addEventListener('click', async () => {
-        if (!currentTrial) {
-            showAlert('No hay una prueba activa para validar.', 'warning');
-            return;
-        }
-
-        let userAnswer = '';
-        const currentTrialType = currentTrial.trial_type;
-        const currentAnswerType = currentTrial.answer_type;
-
-        if (currentTrialType === 'TEXT') {
-            userAnswer = textAnswerInput.value.trim();
-            if (currentAnswerType === 'NUMERIC') {
-                userAnswer = parseFloat(userAnswer);
-                if (isNaN(userAnswer)) {
-                    showAlert('Por favor, introduce una respuesta numérica válida.', 'warning');
-                    return;
+            if (trialStartLog) {
+                const trialElapsedTime = Math.floor((new Date().getTime() - new Date(trialStartLog.timestamp).getTime()) / 1000);
+                currentTrialDuration = Math.max(0, trial.time_limit_seconds - trialElapsedTime);
+                if (currentTrialDuration > 0) {
+                    trialTimerDisplay.classList.remove('hidden');
+                    startTrialTimer();
+                } else {
+                    showAlert('El tiempo para la prueba actual ha expirado al reanudar.', 'warning');
+                    submitAnswer('TIME_EXPIRED'); // Immediately submit if time already ran out
                 }
-            }
-        } else if (currentTrialType === 'QR') {
-            userAnswer = qrResultDisplay.textContent.trim();
-            if (!userAnswer) {
-                showAlert('Por favor, escanea un código QR primero.', 'warning');
-                return;
-            }
-        } else if (currentTrialType === 'GPS') {
-            showAlert('La validación GPS es automática cuando llegas a la zona.', 'info');
-            return;
-        }
-
-        let isCorrect = false;
-        let basePoints = currentGame.initial_score_per_trial || 100;
-
-        switch (currentTrialType) {
-            case 'TEXT':
-                // Asegurar que la comparación sea case-insensitive y maneje números si `correct_answer` es string
-                if (currentAnswerType === 'NUMERIC') {
-                    isCorrect = userAnswer === parseFloat(currentTrial.correct_answer);
-                } else if (currentAnswerType === 'MULTIPLE_OPTIONS' || currentAnswerType === 'SINGLE_CHOICE') {
-                    isCorrect = userAnswer.toLowerCase() === currentTrial.correct_answer.toLowerCase();
-                } else if (currentAnswerType === 'ORDERING') {
-                    // Para ordenación, el CSV guarda "OpciónA;OpciónB", comparamos strings directamente
-                    isCorrect = userAnswer.toLowerCase() === currentTrial.correct_answer.toLowerCase();
-                }
-                break;
-            case 'QR':
-                isCorrect = userAnswer === currentTrial.qr_content;
-                break;
-            case 'GPS':
-                isCorrect = false; // Handled by watchPosition
-                break;
-        }
-
-        if (isCorrect) {
-            showAlert('¡Respuesta Correcta!', 'success');
-            await completeTrial(basePoints);
-        } else {
-            showAlert('Respuesta Incorrecta. Inténtalo de nuevo.', 'error');
-        }
-    });
-}
-
-// Generic hint button logic, applies to whichever hint button is visible
-[hintBtn, qrHintBtn, gpsHintBtn].forEach(btn => {
-    if (btn) {
-        btn.addEventListener('click', async (e) => {
-            if (!currentTrial || !currentTeam) {
-                showAlert('No hay una prueba activa para pedir pista.', 'warning');
-                return;
-            }
-
-            const hintsUsedInThisTrial = currentTeam.hints_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
-            if (hintsUsedInThisTrial >= (currentTrial.hints_count || 0)) {
-                showAlert('No quedan más pistas para esta prueba.', 'warning');
-                e.target.classList.add('hidden');
-                return;
-            }
-
-            // Update hintsUsedPerTrial in a way that handles the array correctly
-            let updatedHintsUsedPerTrial = [...currentTeam.hints_used_per_trial];
-            const existingHintIndex = updatedHintsUsedPerTrial.findIndex(h => h.trialId === currentTrial.id);
-
-            if (existingHintIndex !== -1) {
-                updatedHintsUsedPerTrial[existingHintIndex].count++;
             } else {
-                updatedHintsUsedPerTrial.push({ trialId: currentTrial.id, count: 1 });
+                // If trial start log not found, assume starting fresh for this trial
+                currentTrialDuration = trial.time_limit_seconds;
+                trialTimerDisplay.classList.remove('hidden');
+                startTrialTimer();
             }
-
-
-            const { error } = await supabase
-                .from('teams')
-                .update({
-                    hints_used_global: (currentTeam.hints_used_global || 0) + 1,
-                    hints_used_per_trial: updatedHintsUsedPerTrial,
-                    last_activity: new Date().toISOString()
-                })
-                .eq('id', currentTeam.id);
-
-            if (error) {
-                console.error('Error logging hint:', error);
-                showAlert('Error al registrar la pista. ' + error.message, 'error');
-                return;
-            }
-
-            // Update local state
-            currentTeam.hints_used_global = (currentTeam.hints_used_global || 0) + 1;
-            currentTeam.hints_used_per_trial = updatedHintsUsedPerTrial; // Ensure local state is updated
-
-            const newHintsRemaining = (currentTrial.hints_count || 0) - (hintsUsedInThisTrial + 1);
-
-            if (e.target === hintBtn) hintsRemainingDisplay.textContent = newHintsRemaining;
-            if (e.target === qrHintBtn && qrHintsRemainingDisplay) qrHintsRemainingDisplay.textContent = newHintsRemaining;
-            if (e.target === gpsHintBtn && gpsHintsRemainingDisplay) gpsHintsRemainingDisplay.textContent = newHintsRemaining;
-
-            showAlert(`Pista utilizada. ${currentTrial.hints_cost || 0} puntos restados. Te quedan ${newHintsRemaining} pistas.`, 'info');
-
-            if (newHintsRemaining <= 0) {
-                e.target.classList.add('hidden');
-            }
-            showModal('Pista', currentTrial.hint_content || 'No hay contenido de pista disponible para esta prueba.');
-        });
-    }
-});
-
-
-// --- GPS Functions (for TRIALS) ---
-function initializePlayerMap(targetLat, targetLng, tolerance) {
-    if (playerMap) {
-        playerMap.remove();
-    }
-
-    gpsMapContainer.classList.remove('hidden');
-
-    playerMap = L.map(gpsMapContainer).setView([targetLat, targetLng], 17);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(playerMap);
-
-    if (targetMarker) {
-        playerMap.removeLayer(targetMarker);
-    }
-    targetMarker = L.circleMarker([targetLat, targetLng], {
-        color: 'red',
-        fillColor: '#f03',
-        fillOpacity: 0.5,
-        radius: 8
-    }).addTo(playerMap).bindPopup(`Objetivo: ${currentTrial.narrative || 'Prueba'}`).openPopup(); // Usando 'narrative' para la prueba
-
-    L.circle([targetLat, targetLng], {
-        color: 'blue',
-        fillColor: '#30a',
-        fillOpacity: 0.2,
-        radius: tolerance
-    }).addTo(playerMap);
-
-    if (playerMarker) {
-        playerMap.removeLayer(playerMarker);
-    }
-    playerMarker = L.circleMarker([0, 0], {
-        color: 'green',
-        fillColor: '#0f3',
-        fillOpacity: 0.8,
-        radius: 6
-    }).addTo(playerMap).bindPopup('Tu ubicación');
-
-    startGpsWatch(targetLat, targetLng, tolerance);
-}
-
-function startGpsWatch(targetLat, targetLng, tolerance) {
-    if (gpsWatchId) {
-        stopGpsWatch();
-    }
-
-    if (!navigator.geolocation) {
-        showAlert('Tu navegador no soporta geolocalización.', 'error');
-        showModal('Error GPS', 'Tu navegador no soporta la API de geolocalización, necesaria para pruebas GPS.');
-        return;
-    }
-
-    const options = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-    };
-
-    gpsWatchId = navigator.geolocation.watchPosition(
-        async (position) => {
-            const { latitude, longitude } = position.coords;
-            playerMarker.setLatLng([latitude, longitude]);
-            playerMap.panTo([latitude, longitude]);
-
-            const distance = getDistance(latitude, longitude, targetLat, targetLng);
-            console.log(`Distancia al objetivo de la prueba: ${distance.toFixed(2)} metros`);
-
-            // Asegurarse de usar tolerance_meters del trial
-            if (distance <= currentTrial.tolerance_meters) {
-                showAlert('¡Ubicación de prueba alcanzada! Validando prueba...', 'success');
-                stopGpsWatch();
-                await completeTrial(currentGame.initial_score_per_trial || 100);
-            }
-        },
-        (error) => {
-            console.error('Error de geolocalización para prueba:', error);
-            let errorMessage = '';
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = 'Permiso de geolocalización denegado. Por favor, habilítalo en la configuración de tu navegador.';
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = 'Información de ubicación de prueba no disponible.';
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = 'La solicitud de ubicación de prueba ha caducado.';
-                    break;
-                case error.UNKNOWN_ERROR:
-                    errorMessage = 'Un error desconocido ocurrió al obtener la ubicación para la prueba.';
-                    break;
-            }
-            showModal('Error GPS de Prueba', errorMessage + ' Asegúrate de tener buena señal GPS.');
-        },
-        options
-    );
-}
-
-function stopGpsWatch() {
-    if (gpsWatchId !== null) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-        console.log('GPS watch for trial stopped.');
-    }
-    if (gpsMapContainer) {
-        gpsMapContainer.classList.add('hidden');
-    }
-    if (playerMap) {
-        playerMap.invalidateSize();
+        }
     }
 }
 
-
-// --- New: GPS Functions (for LOCATION ARRIVAL) ---
-function initializeLocationArrivalMap(targetLat, targetLng, tolerance) {
-    if (locationArrivalMap) {
-        locationArrivalMap.remove();
-    }
-
-    locationArrivalMapContainer.classList.remove('hidden');
-
-    locationArrivalMap = L.map(locationArrivalMapContainer).setView([targetLat, targetLng], 17);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(locationArrivalMap);
-
-    if (locationTargetMarker) {
-        locationArrivalMap.removeLayer(locationTargetMarker);
-    }
-    locationTargetMarker = L.circleMarker([targetLat, targetLng], {
-        color: 'red',
-        fillColor: '#f03',
-        fillOpacity: 0.5,
-        radius: 8
-    }).addTo(locationArrivalMap).bindPopup(`Ubicación Objetivo: ${currentLocations[currentLocationIndex].name}`).openPopup();
-
-    L.circle([targetLat, targetLng], {
-        color: 'blue',
-        fillColor: '#30a',
-        fillOpacity: 0.2,
-        radius: tolerance
-    }).addTo(locationArrivalMap);
-
-    if (locationPlayerMarker) {
-        locationArrivalMap.removeLayer(locationPlayerMarker);
-    }
-    locationPlayerMarker = L.circleMarker([0, 0], {
-        color: 'green',
-        fillColor: '#0f3',
-        fillOpacity: 0.8,
-        radius: 6
-    }).addTo(locationArrivalMap).bindPopup('Tu ubicación');
-
-    startLocationGpsWatch(targetLat, targetLng, tolerance);
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
-function startLocationGpsWatch(targetLat, targetLng, tolerance) {
+function parseTimeToSeconds(timeString) {
+    const parts = timeString.split(':');
+    if (parts.length === 2) {
+        const minutes = parseInt(parts[0], 10);
+        const seconds = parseInt(parts[1], 10);
+        return (minutes * 60) + seconds;
+    }
+    return 0;
+}
+
+// --- GPS Functionality ---
+async function checkLocationArrival(location) {
+    locationNarrativeSection.classList.add('hidden'); // Hide narrative initially
+    startLocationTrialsBtn.classList.add('hidden'); // Hide button until arrival
+    locationArrivalMapContainer.classList.remove('hidden'); // Show map container
+    locationArrivalMessage.textContent = 'Buscando tu ubicación...';
+
+    // Initialize map if not already done
+    if (!locationArrivalMap) {
+        locationArrivalMap = L.map('location-arrival-map').setView([location.latitude, location.longitude], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(locationArrivalMap);
+
+        locationTargetMarker = L.marker([location.latitude, location.longitude]).addTo(locationArrivalMap)
+            .bindPopup(`<b>Destino: ${location.name}</b>`).openPopup();
+    } else {
+        // If map exists, just update view and target marker
+        locationArrivalMap.setView([location.latitude, location.longitude], 16);
+        if (locationTargetMarker) {
+            locationTargetMarker.setLatLng([location.latitude, location.longitude]);
+            locationTargetMarker.setPopupContent(`<b>Destino: ${location.name}</b>`).openPopup();
+        } else {
+            locationTargetMarker = L.marker([location.latitude, location.longitude]).addTo(locationArrivalMap)
+                .bindPopup(`<b>Destino: ${location.name}</b>`).openPopup();
+        }
+    }
+
+    // Clear any previous watchPosition
     if (locationGpsWatchId) {
-        stopLocationGpsWatch();
+        navigator.geolocation.clearWatch(locationGpsWatchId);
     }
 
-    if (!navigator.geolocation) {
-        showAlert('Tu navegador no soporta geolocalización.', 'error');
-        showModal('Error GPS', 'Tu navegador no soporta la API de geolocalización, necesaria para la llegada a ubicaciones.');
-        return;
-    }
-
-    const options = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-    };
-
+    // Start watching position
     locationGpsWatchId = navigator.geolocation.watchPosition(
         (position) => {
-            const { latitude, longitude } = position.coords;
-            locationPlayerMarker.setLatLng([latitude, longitude]);
-            locationArrivalMap.panTo([latitude, longitude]);
+            const { latitude, longitude, accuracy } = position.coords;
+            const distance = getDistance(
+                latitude, longitude,
+                location.latitude, location.longitude
+            );
+            const threshold = 20; // meters
 
-            const distance = getDistance(latitude, longitude, targetLat, targetLng);
-            console.log(`Distancia a la ubicación objetivo: ${distance.toFixed(2)} metros`);
-
-            if (distance <= tolerance) {
-                showAlert('¡Has llegado a la ubicación! Puedes comenzar las pruebas.', 'success');
-                locationArrivalMessage.textContent = '¡Has llegado! Pulsa "Comenzar Pruebas".';
-                startLocationTrialsBtn.disabled = false; // Enable the button
-                stopLocationGpsWatch(); // Stop watching once arrived
+            if (locationPlayerMarker) {
+                locationPlayerMarker.setLatLng([latitude, longitude]);
             } else {
-                locationArrivalMessage.textContent = `Dirígete a la ubicación. Distancia: ${distance.toFixed(0)}m`;
+                locationPlayerMarker = L.marker([latitude, longitude], { icon: L.divIcon({ className: 'player-marker', html: '<div style="background-color: blue; width: 10px; height: 10px; border-radius: 50%;"></div>' }) }).addTo(locationArrivalMap)
+                    .bindPopup('Tu ubicación actual').openPopup();
+            }
+
+            locationArrivalMap.panTo([latitude, longitude]); // Keep map centered on player
+
+            locationArrivalMessage.textContent = `Distancia al destino: ${distance.toFixed(0)} metros. Precisión GPS: ${accuracy.toFixed(0)}m`;
+
+            if (distance < threshold) {
+                clearInterval(locationGpsWatchId);
+                locationGpsWatchId = null;
+                locationArrivalMessage.textContent = `¡Has llegado a ${location.name}!`;
+                startLocationTrialsBtn.classList.remove('hidden');
+
+                // Log location arrival
+                currentTeam.progress_log.push({
+                    timestamp: new Date().toISOString(),
+                    event: 'location_arrived',
+                    location_id: location.id,
+                    location_name: location.name,
+                    arrival_coords: { latitude, longitude, accuracy },
+                    distance_at_arrival: distance
+                });
+                supabase.from('teams').update({ progress_log: currentTeam.progress_log }).eq('id', currentTeam.id).then(({ error }) => {
+                    if (error) console.error('Error logging location arrival:', error);
+                });
             }
         },
         (error) => {
-            console.error('Error de geolocalización para ubicación:', error);
-            let errorMessage = '';
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = 'Permiso de geolocalización denegado. Habilítalo para jugar.';
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = 'Información de ubicación de la ubicación no disponible.';
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = 'La solicitud de ubicación de la ubicación ha caducado.';
-                    break;
-                case error.UNKNOWN_ERROR:
-                    errorMessage = 'Un error desconocido ocurrió al obtener la ubicación para la ubicación.';
-                    break;
-            }
-            showModal('Error GPS de Ubicación', errorMessage + ' Asegúrate de tener buena señal GPS.');
-            startLocationTrialsBtn.disabled = true; // Keep button disabled on error
+            console.error('Error al obtener la ubicación GPS:', error);
+            locationArrivalMessage.textContent = 'Error al obtener tu ubicación GPS. Por favor, asegúrate de que el GPS esté activado y permite el acceso.';
+            startLocationTrialsBtn.classList.remove('hidden'); // Allow manual continuation if GPS fails
+            showModal('Error GPS', 'No pudimos obtener tu ubicación. Asegúrate de que el GPS esté encendido y que el navegador tenga permisos. Si el problema persiste, puedes intentar iniciar las pruebas manualmente.');
         },
-        options
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
 }
 
-function stopLocationGpsWatch() {
-    if (locationGpsWatchId !== null) {
-        navigator.geolocation.clearWatch(locationGpsWatchId);
-        locationGpsWatchId = null;
-        console.log('GPS watch for location arrival stopped.');
-    }
-    if (locationArrivalMap) {
-        // We might not remove the map, just hide it or invalidate its size if needed
-        // locationArrivalMap.remove(); // Only if completely done with it
-        locationArrivalMap.invalidateSize(); // Important for proper display if it was hidden
-    }
+// Haversine formula to calculate distance between two lat/lon points
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const d = R * c; // in metres
+    return d;
 }
 
-
-// --- QR Scanner Functions ---
-if (qrScanBtn) {
-    qrScanBtn.addEventListener('click', () => {
-        if (qrScanning) {
-            stopQrScanner();
-            qrScanBtn.textContent = 'Escanear QR';
-            qrResultDisplay.textContent = 'Escáner detenido.';
-        } else {
-            startQrScanner();
-            qrScanBtn.textContent = 'Detener Escáner';
-            qrResultDisplay.textContent = 'Scanning...';
-        }
-    });
-}
-
-
-function startQrScanner() {
-    qrScannerContainer.classList.remove('hidden');
-    if (qrScanner) {
-        qrScanner.clear();
-    }
-
-    qrScanner = new Html5Qrcode("qr-scanner");
-    const qrCodeSuccessCallback = async (decodedText, decodedResult) => {
+// --- QR Code Scanner Functionality ---
+async function toggleQrScanner() {
+    if (!qrScanning) {
+        startQrScanner();
+        qrReaderBtn.textContent = 'Detener Escáner QR';
+    } else {
         stopQrScanner();
-        qrResultDisplay.textContent = decodedText;
-        showAlert('QR Escaneado: ' + decodedText, 'info');
+        qrReaderBtn.textContent = 'Activar Escáner QR';
+    }
+}
 
-        if (currentTrial && currentTrial.trial_type === 'QR' && currentTrial.qr_content === decodedText) { // Usando 'trial_type'
-            showAlert('¡QR Correcto! Validando prueba...', 'success');
-            await completeTrial(currentGame.initial_score_per_trial || 100); // Usando initial_score_per_trial
-        } else {
-            showAlert('QR incorrecto o no corresponde a esta prueba.', 'error');
-        }
-    };
+async function startQrScanner() {
+    if (qrScanning) return; // Prevent multiple instances
 
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-    qrScanner.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
-        .catch((err) => {
-            console.error("Error al iniciar el escáner QR:", err);
-            showModal('Error Escáner QR', 'No se pudo iniciar la cámara. Asegúrate de dar permiso y de que no esté en uso por otra aplicación. ' + err.message);
-            stopQrScanner();
-        });
     qrScanning = true;
+    qrReaderContainer.classList.remove('hidden'); // Show QR elements
+
+    qrScanner = new Html5Qrcode("qr-reader");
+    const config = { fps: 10, qrbox: 250 };
+
+    try {
+        await qrScanner.start({ facingMode: "environment" }, config,
+            (decodedText, decodedResult) => {
+                // onScanSuccess
+                qrCodeValueDisplay.textContent = decodedText;
+                showAlert(`QR Escaneado: ${decodedText}`, 'success', 2000);
+                // Optionally stop scanner after first successful scan
+                // stopQrScanner(); // You might want to remove this if multiple scans are needed
+            },
+            (errorMessage) => {
+                // onScanError (optional)
+                // console.warn(`QR Scan Error: ${errorMessage}`);
+                // qrCodeValueDisplay.textContent = `Error al escanear: ${errorMessage}`;
+            });
+        qrCodeValueDisplay.textContent = 'Escaneando QR...';
+    } catch (err) {
+        console.error("Error starting QR scanner:", err);
+        showAlert("Error al iniciar el escáner QR. Asegúrate de permitir el acceso a la cámara.", 'error');
+        qrScanning = false;
+        qrReaderContainer.classList.add('hidden');
+    }
 }
 
 function stopQrScanner() {
     if (qrScanner && qrScanning) {
         qrScanner.stop().then(() => {
             console.log("QR scanner stopped.");
-            qrScannerContainer.classList.add('hidden');
             qrScanning = false;
+            qrReaderContainer.classList.add('hidden');
+            qrReaderVideo.srcObject = null; // Clear video stream
+            qrCodeValueDisplay.textContent = '';
+            qrReaderBtn.textContent = 'Activar Escáner QR';
         }).catch((err) => {
-            console.error("Error deteniendo el escáner QR:", err);
-            qrScanning = false;
+            console.error("Error stopping QR scanner:", err);
+            qrScanning = false; // Still try to reset flag even if stop fails
         });
     }
-}
-
-// --- Global Rankings ---
-async function populateRankingGameSelect() {
-    const { data, error } = await supabase
-        .from('games')
-        .select('id, title')
-        .order('title', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching games for rankings select:', error);
-        showAlert('Error al cargar juegos para rankings.', 'error');
-        return;
-    }
-
-    globalRankingsGameSelect.innerHTML = '<option value="">Todos los Juegos</option>';
-    data.forEach(game => {
-        const option = document.createElement('option');
-        option.value = game.id;
-        option.textContent = game.title;
-        globalRankingsGameSelect.appendChild(option);
-    });
-}
-
-async function fetchGlobalRankings(gameId = null) {
-    let query = supabase
-        .from('rankings')
-        .select(`
-            *,
-            teams (name),
-            games (title)
-        `)
-        .order('final_score', { ascending: false })
-        .order('completion_time', { ascending: true });
-
-    if (gameId) {
-        query = query.eq('game_id', gameId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error fetching global rankings:', error);
-        showAlert('Error al cargar rankings globales: ' + error.message, 'error');
-        globalRankingsList.innerHTML = '<p>Error al cargar los rankings.</p>';
-        return;
-    }
-
-    globalRankingsList.innerHTML = '';
-    if (data.length === 0) {
-        globalRankingsList.innerHTML = '<p class="info-message">No hay rankings disponibles para esta selección.</p>';
-        return;
-    }
-
-    data.forEach((rank, index) => {
-        const rankCard = document.createElement('div');
-        rankCard.className = 'card ranking-card';
-        rankCard.innerHTML = `
-            <h3>#${index + 1} - ${rank.teams ? rank.teams.name : 'Equipo Desconocido'}</h3>
-            <p>Puntuación Final: <span>${rank.final_score}</span></p>
-            <p>Tiempo de Completado: <span>${formatTime(rank.completion_time)}</span></p>
-            <p>Juego: <span>${rank.games ? rank.games.title : 'Desconocido'}</span></p>
-            <p>Fecha: <span>${new Date(rank.completion_date).toLocaleDateString()}</span></p>
-        `;
-        globalRankingsList.appendChild(rankCard);
-    });
-}
-
-// --- Event Listeners (Rest of the application) ---
-
-if (backToGameSelectionBtn) {
-    backToGameSelectionBtn.addEventListener('click', () => {
-        showScreen(gameSelectionScreen);
-        teamNameInput.value = ''; // Clear team name input
-        fetchActiveGames();
-    });
-}
-
-if (continueGameBtn) {
-    continueGameBtn.addEventListener('click', continueFromFeedback);
-}
-
-if (playAgainBtn) {
-    playAgainBtn.addEventListener('click', () => {
-        currentTeam = null;
-        currentGame = null;
-        currentLocations = [];
-        currentTrials = [];
-        currentLocationIndex = 0;
-        currentTrialIndex = 0;
-        stopGlobalTimer();
-        stopTrialTimer();
-        stopGpsWatch(); // Stop GPS for trial
-        stopLocationGpsWatch(); // Stop GPS for location arrival
-        stopQrScanner();
-        localStorage.removeItem('currentTeamId'); // Clear any residual state
-        showScreen(gameSelectionScreen);
-        fetchActiveGames();
-    });
-}
-
-if (viewFinalRankingsBtn) {
-    viewFinalRankingsBtn.addEventListener('click', () => {
-        showScreen(globalRankingsScreen);
-        populateRankingGameSelect();
-        fetchGlobalRankings();
-    });
-}
-
-if (globalRankingsGameSelect) {
-    globalRankingsGameSelect.addEventListener('change', (e) => {
-        const selectedGameId = e.target.value === '' ? null : e.target.value;
-        fetchGlobalRankings(selectedGameId);
-    });
-}
-
-if (backToMenuFromRankingsBtn) {
-    backToMenuFromRankingsBtn.addEventListener('click', () => {
-        showScreen(gameSelectionScreen);
-        fetchActiveGames();
-    });
 }
