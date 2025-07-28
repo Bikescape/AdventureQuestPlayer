@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showScreen(gameActiveScreen);
             resumeGameTimers();
             await displayCurrentTrial();
-            showAlert('Reanudando juego como equipo: ' + currentTeam.name, 'info'); // Corregido: Team a name
+            showAlert('Reanudando juego como equipo: ' + currentTeam.name, 'info'); // Usando 'name' para el equipo
             return;
         } else {
             localStorage.removeItem('currentTeamId');
@@ -333,7 +333,7 @@ if (startGameBtn) {
         let { data: existingTeam, error: teamCheckError } = await supabase
             .from('teams')
             .select('id')
-            .eq('name', teamName) // Corregido: Team a name
+            .eq('name', teamName) // Usando 'name' para el equipo
             .eq('game_id', currentGame.id)
             .single();
 
@@ -351,7 +351,7 @@ if (startGameBtn) {
             const { data: newTeam, error: createError } = await supabase
                 .from('teams')
                 .insert({
-                    name: teamName, // Corregido: Team a name
+                    name: teamName, // Usando 'name' para el equipo
                     game_id: currentGame.id,
                     current_location_id: null,
                     current_trial_id: null,
@@ -397,7 +397,7 @@ async function initializeGameFlowForTeam() {
         .from('locations')
         .select('*')
         .eq('game_id', currentGame.id)
-        .order('order_index', { ascending: true }); // Corregido: locations_order a order_index
+        .order('order_index', { ascending: true }); // Usando 'order_index' para locations
 
     if (locError) {
         console.error('Error fetching locations:', locError);
@@ -480,7 +480,7 @@ async function loadTeamState(teamId) {
             .from('locations')
             .select('*')
             .eq('game_id', currentGame.id)
-            .order('order_index', { ascending: true }); // Corregido: locations_order a order_index
+            .order('order_index', { ascending: true }); // Usando 'order_index' para locations
         if (locError) {
             console.error('Error fetching locations for loaded game:', locError);
             showAlert('Error al cargar ubicaciones para juego reanudado.', 'error');
@@ -502,7 +502,7 @@ async function loadTeamState(teamId) {
                 .from('trials')
                 .select('*')
                 .eq('location_id', currentTeam.current_location_id)
-                .order('order_index', { ascending: true }); // Mantenido 'order_index' para trials
+                .order('order_index', { ascending: true }); // Usando 'order_index' para trials
             if (trialError) {
                 console.error('Error fetching trials for loaded location:', trialError);
                 showAlert('Error al cargar pruebas para ubicación reanudada.', 'error');
@@ -559,7 +559,7 @@ async function displayLocationNarrative(location) {
                 .from('trials')
                 .select('*')
                 .eq('location_id', location.id)
-                .order('order_index', { ascending: true }); // Mantenido 'order_index' para trials
+                .order('order_index', { ascending: true }); // Usando 'order_index' para trials
 
             if (trialError) {
                 console.error('Error fetching trials for location:', trialError);
@@ -675,10 +675,10 @@ async function displayCurrentTrial() {
             if (hintBtn && hintsRemaining > 0) hintBtn.classList.remove('hidden');
 
             switch (currentTrial.answer_type) {
-                case 'SINGLE_CHOICE': // Corregido el valor del CSV
+                case 'SINGLE_CHOICE':
                 case 'NUMERIC':
                     break;
-                case 'MULTIPLE_OPTIONS': // Corregido el valor del CSV
+                case 'MULTIPLE_OPTIONS':
                     textOptionsContainer.classList.remove('hidden');
                     textAnswerInput.classList.add('hidden');
                     // Options en CSV viene como un JSON string, necesitamos parsearlo
@@ -915,7 +915,7 @@ if (validateAnswerBtn) {
                 // Asegurar que la comparación sea case-insensitive y maneje números si `correct_answer` es string
                 if (currentAnswerType === 'NUMERIC') {
                     isCorrect = userAnswer === parseFloat(currentTrial.correct_answer);
-                } else if (currentAnswerType === 'MULTIPLE_OPTIONS' || currentAnswerType === 'SINGLE_CHOICE') { // Corregidos nombres de tipos
+                } else if (currentAnswerType === 'MULTIPLE_OPTIONS' || currentAnswerType === 'SINGLE_CHOICE') {
                     isCorrect = userAnswer.toLowerCase() === currentTrial.correct_answer.toLowerCase();
                 } else if (currentAnswerType === 'ORDERING') {
                     // Para ordenación, el CSV guarda "OpciónA;OpciónB", comparamos strings directamente
@@ -1204,7 +1204,7 @@ async function fetchGlobalRankings(gameId = null) {
         .from('rankings')
         .select(`
             *,
-            teams (name), // Corregido: Team a name
+            teams (name), // Usando 'name' para el equipo
             games (title)
         `)
         .order('final_score', { ascending: false })
