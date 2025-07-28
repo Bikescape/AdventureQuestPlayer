@@ -357,8 +357,8 @@ if (startGameBtn) {
                     current_trial_id: null,
                     start_time: new Date().toISOString(),
                     last_trial_start_time: null,
-                    pistas_used_global: 0,
-                    pistas_used_per_trial: [],
+                    hints_used_global: 0, // CAMBIADO: pistas_used_global a hints_used_global
+                    hints_used_per_trial: [], // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
                     total_time: 0,
                     total_score: 0,
                     progress_log: [],
@@ -425,8 +425,8 @@ async function initializeGameFlowForTeam() {
             // Reset progression stats for a new game
             total_time: 0,
             total_score: 0,
-            pistas_used_global: 0,
-            pistas_used_per_trial: [],
+            hints_used_global: 0, // CAMBIADO: pistas_used_global a hints_used_global
+            hints_used_per_trial: [], // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
             progress_log: [],
         })
         .eq('id', currentTeam.id);
@@ -442,8 +442,8 @@ async function initializeGameFlowForTeam() {
     currentTeam.start_time = new Date().toISOString();
     currentTeam.total_time = 0;
     currentTeam.total_score = 0;
-    currentTeam.pistas_used_global = 0;
-    currentTeam.pistas_used_per_trial = [];
+    currentTeam.hints_used_global = 0; // CAMBIADO: pistas_used_global a hints_used_global
+    currentTeam.hints_used_per_trial = []; // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
     currentTeam.progress_log = [];
 
 
@@ -632,9 +632,11 @@ async function displayCurrentTrial() {
         trialAudio.play().catch(e => console.error("Error playing audio:", e));
     }
 
-    const hintInfo = currentTeam.pistas_used_per_trial.find(h => h.trialId === currentTrial.id);
+    // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
+    const hintInfo = currentTeam.hints_used_per_trial.find(h => h.trialId === currentTrial.id);
     const hintsUsed = hintInfo ? hintInfo.count : 0;
-    const hintsRemaining = (currentTrial.hint_count || 0) - hintsUsed; // Usando 'hint_count'
+    // CAMBIADO: hint_count a hints_count
+    const hintsRemaining = (currentTrial.hints_count || 0) - hintsUsed;
 
     // Reset all hint displays and buttons
     [hintBtn, qrHintBtn, gpsHintBtn].forEach(btn => {
@@ -649,7 +651,8 @@ async function displayCurrentTrial() {
             qrResultDisplay.textContent = '';
             qrScannerContainer.classList.remove('hidden');
             if (qrHintsRemainingDisplay) qrHintsRemainingDisplay.textContent = hintsRemaining;
-            if (qrHintCostDisplay) qrHintCostDisplay.textContent = currentTrial.hint_cost || 0;
+            // CAMBIADO: hint_cost a hints_cost
+            if (qrHintCostDisplay) qrHintCostDisplay.textContent = currentTrial.hints_cost || 0;
             if (qrHintBtn && hintsRemaining > 0) qrHintBtn.classList.remove('hidden');
             break;
         case 'GPS':
@@ -658,7 +661,8 @@ async function displayCurrentTrial() {
             // Usando 'latitude', 'longitude', 'tolerance_meters'
             initializePlayerMap(currentTrial.latitude, currentTrial.longitude, currentTrial.tolerance_meters);
             if (gpsHintsRemainingDisplay) gpsHintsRemainingDisplay.textContent = hintsRemaining;
-            if (gpsHintCostDisplay) gpsHintCostDisplay.textContent = currentTrial.hint_cost || 0;
+            // CAMBIADO: hint_cost a hints_cost
+            if (gpsHintCostDisplay) gpsHintCostDisplay.textContent = currentTrial.hints_cost || 0;
             if (gpsHintBtn && hintsRemaining > 0) gpsHintBtn.classList.remove('hidden');
             break;
         case 'TEXT':
@@ -671,7 +675,8 @@ async function displayCurrentTrial() {
             textOptionsContainer.classList.add('hidden');
 
             if (hintsRemainingDisplay) hintsRemainingDisplay.textContent = hintsRemaining;
-            if (hintCostDisplay) hintCostDisplay.textContent = currentTrial.hint_cost || 0;
+            // CAMBIADO: hint_cost a hints_cost
+            if (hintCostDisplay) hintCostDisplay.textContent = currentTrial.hints_cost || 0;
             if (hintBtn && hintsRemaining > 0) hintBtn.classList.remove('hidden');
 
             switch (currentTrial.answer_type) {
@@ -754,9 +759,10 @@ async function completeTrial(pointsAwarded) {
     let finalTrialScore = Math.max(0, pointsAwarded - timeTaken);
 
     const currentTrial = currentTrials[currentTrialIndex];
-    const hintsUsedInThisTrial = currentTeam.pistas_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
-    // Usando 'hint_cost'
-    finalTrialScore -= (hintsUsedInThisTrial * (currentTrial.hint_cost || 0));
+    // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
+    const hintsUsedInThisTrial = currentTeam.hints_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
+    // CAMBIADO: hint_cost a hints_cost
+    finalTrialScore -= (hintsUsedInThisTrial * (currentTrial.hints_cost || 0));
     finalTrialScore = Math.max(0, finalTrialScore);
 
     const progressLogEntry = {
@@ -789,7 +795,7 @@ async function completeTrial(pointsAwarded) {
     }
 
     feedbackMessage.textContent = '¡Prueba Completada!';
-    feedbackScore.textContent = `Puntos: ${finalTrialScore} (${pointsAwarded} base - ${timeTaken}s - ${hintsUsedInThisTrial * (currentTrial.hint_cost || 0)} pts por pistas)`;
+    feedbackScore.textContent = `Puntos: ${finalTrialScore} (${pointsAwarded} base - ${timeTaken}s - ${hintsUsedInThisTrial * (currentTrial.hints_cost || 0)} pts por pistas)`; // CAMBIADO: hint_cost a hints_cost
     showScreen(feedbackScreen);
 }
 
@@ -948,30 +954,33 @@ if (validateAnswerBtn) {
                 return;
             }
 
-            const hintsUsedInThisTrial = currentTeam.pistas_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
-            // Usando 'hint_count' y 'hint_cost'
-            if (hintsUsedInThisTrial >= (currentTrial.hint_count || 0)) {
+            // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
+            const hintsUsedInThisTrial = currentTeam.hints_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
+            // CAMBIADO: hint_count a hints_count
+            // CAMBIADO: hint_cost a hints_cost
+            if (hintsUsedInThisTrial >= (currentTrial.hints_count || 0)) {
                 showAlert('No quedan más pistas para esta prueba.', 'warning');
                 e.target.classList.add('hidden');
                 return;
             }
 
             // Update hintsUsedPerTrial in a way that handles the array correctly
-            let updatedPistasUsedPerTrial = [...currentTeam.pistas_used_per_trial];
-            const existingHintIndex = updatedPistasUsedPerTrial.findIndex(h => h.trialId === currentTrial.id);
+            // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
+            let updatedHintsUsedPerTrial = [...currentTeam.hints_used_per_trial];
+            const existingHintIndex = updatedHintsUsedPerTrial.findIndex(h => h.trialId === currentTrial.id);
 
             if (existingHintIndex !== -1) {
-                updatedPistasUsedPerTrial[existingHintIndex].count++;
+                updatedHintsUsedPerTrial[existingHintIndex].count++;
             } else {
-                updatedPistasUsedPerTrial.push({ trialId: currentTrial.id, count: 1 });
+                updatedHintsUsedPerTrial.push({ trialId: currentTrial.id, count: 1 });
             }
 
 
             const { error } = await supabase
                 .from('teams')
                 .update({
-                    pistas_used_global: (currentTeam.pistas_used_global || 0) + 1,
-                    pistas_used_per_trial: updatedPistasUsedPerTrial,
+                    hints_used_global: (currentTeam.hints_used_global || 0) + 1, // CAMBIADO: pistas_used_global a hints_used_global
+                    hints_used_per_trial: updatedHintsUsedPerTrial, // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
                     last_activity: new Date().toISOString()
                 })
                 .eq('id', currentTeam.id);
@@ -983,16 +992,18 @@ if (validateAnswerBtn) {
             }
 
             // Update local state
-            currentTeam.pistas_used_global = (currentTeam.pistas_used_global || 0) + 1;
-            currentTeam.pistas_used_per_trial = updatedPistasUsedPerTrial; // Ensure local state is updated
+            currentTeam.hints_used_global = (currentTeam.hints_used_global || 0) + 1; // CAMBIADO: pistas_used_global a hints_used_global
+            currentTeam.hints_used_per_trial = updatedHintsUsedPerTrial; // Ensure local state is updated // CAMBIADO: pistas_used_per_trial a hints_used_per_trial
 
-            const newHintsRemaining = (currentTrial.hint_count || 0) - (hintsUsedInThisTrial + 1);
+            // CAMBIADO: hint_count a hints_count
+            const newHintsRemaining = (currentTrial.hints_count || 0) - (hintsUsedInThisTrial + 1);
 
             if (e.target === hintBtn) hintsRemainingDisplay.textContent = newHintsRemaining;
             if (e.target === qrHintBtn && qrHintsRemainingDisplay) qrHintsRemainingDisplay.textContent = newHintsRemaining;
             if (e.target === gpsHintBtn && gpsHintsRemainingDisplay) gpsHintsRemainingDisplay.textContent = newHintsRemaining;
 
-            showAlert(`Pista utilizada. ${currentTrial.hint_cost || 0} puntos restados. Te quedan ${newHintsRemaining} pistas.`, 'info');
+            // CAMBIADO: hint_cost a hints_cost
+            showAlert(`Pista utilizada. ${currentTrial.hints_cost || 0} puntos restados. Te quedan ${newHintsRemaining} pistas.`, 'info');
 
             if (newHintsRemaining <= 0) {
                 e.target.classList.add('hidden');
