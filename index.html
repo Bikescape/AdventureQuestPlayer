@@ -16,125 +16,127 @@
         <div class="loading-content">
             <div class="logo">🧭 Aventura Quest</div>
             <div class="loading-spinner"></div>
-            <p>Preparando tu aventura...</p>
+            <p>Cargando aventura...</p>
         </div>
     </div>
 
     <div id="welcome-screen" class="screen hidden">
         <header>
-            <div class="logo">🧭 Aventura Quest</div>
+            <h1>Bienvenido a Aventura Quest</h1>
         </header>
-        <main class="welcome-main">
-            <h1>¡Bienvenido a la Aventura!</h1>
-            <p>Prepárate para un viaje lleno de misterios y desafíos.</p>
-            <button id="start-new-game-flow-btn" class="main-action-button">Comenzar Aventura</button>
-            </main>
+        <main>
+            <p>¡Prepárate para una emocionante búsqueda del tesoro al aire libre!</p>
+            <button id="start-new-game-flow-btn" class="main-action-button">Comenzar Nueva Aventura</button>
+        </main>
     </div>
 
     <div id="game-selection-screen" class="screen hidden">
         <header>
-            <div class="logo">🧭 Aventura Quest</div>
-            <h1 class="header-title">Selecciona tu Aventura</h1>
+            <h1>Selecciona tu Aventura</h1>
         </header>
-        <main class="selection-main">
+        <main>
             <div id="game-list" class="card-grid">
                 <p>Cargando juegos activos...</p>
             </div>
-            </main>
+        </main>
     </div>
 
     <div id="game-details-screen" class="screen hidden">
         <header>
-            <div class="logo">🧭 Aventura Quest</div>
-            <h1 class="header-title">Detalles del Juego</h1>
+            <h1 id="game-detail-title"></h1>
         </header>
-        <main class="details-main">
-            <h2 id="game-details-title"></h2>
-            <p><strong class="detail-label">Descripción:</strong> <span id="game-details-description"></span></p>
-            <p><strong class="detail-label">Mecánica:</strong> <span id="game-details-mechanics"></span></p>
-            <p><strong class="detail-label">Narrativa Inicial:</strong> <span id="game-details-narrative"></span></p>
-
-            <div class="team-setup">
-                <label for="team-name-input">Nombre de tu Equipo:</label>
-                <input type="text" id="team-name-input" placeholder="Ej: Los Exploradores Valientes" required>
-                <button id="create-team-btn" class="main-action-button">¡Iniciar Juego!</button>
-                </div>
-            <button id="back-to-game-selection-btn" class="secondary-action-button">Volver a Selección</button>
+        <main>
+            <div class="game-details-content">
+                <p id="game-detail-description"></p>
+                <p><strong>Mecánica:</strong> <span id="game-detail-mechanics"></span></p>
+                <p class="initial-narrative-text" id="game-detail-initial-narrative"></p>
+                <div id="game-detail-media" class="narrative-media"></div>
+            </div>
+            <div class="team-creation-section">
+                <h2>Crea tu Equipo</h2>
+                <input type="text" id="team-name-input" placeholder="Nombre de tu Equipo" required>
+                <button id="start-game-btn" class="main-action-button">Iniciar Juego</button>
+            </div>
+            <button id="back-to-game-selection-btn" class="secondary-action-button">Volver a Selección de Juego</button>
         </main>
     </div>
 
     <div id="game-active-screen" class="screen hidden">
         <header class="game-header">
-            <div class="timer-display">
+            <div class="game-stats">
                 <span id="game-total-time">Tiempo Total: 00:00</span>
                 <span id="trial-timer">Tiempo Prueba: 00:00</span>
             </div>
-            <div class="score-display">
-                Puntuación: <span id="current-score">0</span>
+            <div class="game-score">
+                Puntos: <span id="current-score">0</span>
             </div>
         </header>
         <main class="game-main">
-            <div id="location-narrative-section" class="trial-section">
-                <div id="location-narrative" class="narrative-content">
+            <section id="location-narrative-section" class="hidden">
+                <div class="card narrative-card">
+                    <h2 class="section-title">Narrativa de Ubicación</h2>
+                    <div id="location-narrative" class="narrative-content"></div>
+                </div>
+            </section>
+
+            <section id="trial-section">
+                <div class="card trial-card">
+                    <h2 class="section-title">Prueba Actual</h2>
+                    <div id="trial-narrative" class="narrative-content"></div>
+                    <div class="narrative-media">
+                        <img id="trial-image" class="narrative-image hidden" alt="Imagen de la prueba">
+                        <audio id="trial-audio" controls class="narrative-audio hidden"></audio>
+                    </div>
+
+                    <div id="text-trial-section" class="trial-section hidden">
+                        <p id="text-question" class="question-text"></p>
+                        <input type="text" id="text-answer-input" placeholder="Tu respuesta...">
+                        <div id="text-options-container" class="options-container hidden">
+                            </div>
+                        <button id="validate-answer-btn" class="btn btn-primary">Validar Respuesta</button>
+                        <div class="hint-info">
+                            <button id="hint-btn" class="btn btn-secondary hint-button">Pedir Pista (<span id="hint-cost"></span> pts)</button>
+                            <span class="hints-remaining">Pistas restantes: <span id="hints-remaining"></span></span>
+                        </div>
+                    </div>
+
+                    <div id="qr-trial-section" class="trial-section hidden">
+                        <div id="qr-scanner" class="qr-scanner-container"></div>
+                        <p class="qr-result-display">Resultado QR: <span id="qr-result"></span></p>
+                        <button id="qr-scan-btn" class="btn btn-primary">Escanear QR</button>
+                        <div class="hint-info">
+                            <button id="qr-hint-btn" class="btn btn-secondary hint-button">Pedir Pista (<span id="qr-hint-cost"></span> pts)</button>
+                            <span class="hints-remaining">Pistas restantes: <span id="qr-hints-remaining"></span></span>
+                        </div>
+                    </div>
+
+                    <div id="gps-trial-section" class="trial-section hidden">
+                        <p>Dirígete a la ubicación marcada en el mapa.</p>
+                        <div id="gps-map" class="map-container"></div>
+                        <div class="hint-info">
+                            <button id="gps-hint-btn" class="btn btn-secondary hint-button">Pedir Pista (<span id="gps-hint-cost"></span> pts)</button>
+                            <span class="hints-remaining">Pistas restantes: <span id="gps-hints-remaining"></span></span>
+                        </div>
                     </div>
                 </div>
-
-            <div id="text-trial-section" class="trial-section hidden">
-                <p id="trial-narrative" class="trial-narrative"></p>
-                <img id="trial-image" class="trial-image hidden" alt="Imagen de la prueba">
-                <audio id="trial-audio" class="trial-audio hidden" controls></audio>
-                <h3 id="text-question" class="question-text"></h3>
-                <input type="text" id="text-answer-input" placeholder="Introduce tu respuesta aquí">
-                <div id="text-options-container" class="options-container hidden">
-                    </div>
-                <button id="validate-answer-btn" class="main-action-button">Validar Respuesta</button>
-                <div class="hint-section">
-                    <button id="hint-btn" class="btn btn-secondary">Pista (<span id="hint-cost"></span> pts)</button>
-                    <span class="hints-info">Pistas restantes: <span id="hints-remaining"></span></span>
-                </div>
-            </div>
-
-            <div id="qr-trial-section" class="trial-section hidden">
-                <p id="qr-trial-narrative" class="trial-narrative"></p>
-                <img id="qr-trial-image" class="trial-image hidden" alt="Imagen de la prueba">
-                <audio id="qr-trial-audio" class="trial-audio hidden" controls></audio>
-                <div id="qr-scanner-container" class="qr-scanner-view">
-                    <div id="qr-scanner" style="width:100%;"></div>
-                </div>
-                <button id="qr-scan-btn" class="main-action-button">Escanear QR</button>
-                <p class="qr-result-display">Resultado: <span id="qr-result"></span></p>
-                <div class="hint-section">
-                    <button id="qr-hint-btn" class="btn btn-secondary">Pista (<span id="qr-hint-cost"></span> pts)</button>
-                    <span class="hints-info">Pistas restantes: <span id="qr-hints-remaining"></span></span>
-                </div>
-            </div>
-
-            <div id="gps-trial-section" class="trial-section hidden">
-                <p id="gps-trial-narrative" class="trial-narrative"></p>
-                <img id="gps-trial-image" class="trial-image hidden" alt="Imagen de la prueba">
-                <audio id="gps-trial-audio" class="trial-audio hidden" controls></audio>
-                <div id="gps-map" class="map-container"></div>
-                <p class="gps-info">¡Dirígete a la ubicación marcada en el mapa! La prueba se validará automáticamente al llegar.</p>
-                <div class="hint-section">
-                    <button id="gps-hint-btn" class="btn btn-secondary">Pista (<span id="gps-hint-cost"></span> pts)</button>
-                    <span class="hints-info">Pistas restantes: <span id="gps-hints-remaining"></span></span>
-                </div>
-            </div>
+            </section>
         </main>
     </div>
 
     <div id="feedback-screen" class="screen hidden">
-        <main class="feedback-main">
-            <h2 id="feedback-message">¡Prueba Completada!</h2>
-            <p id="feedback-score">Puntos: 100</p>
+        <main>
+            <h1 id="feedback-message"></h1>
+            <p id="feedback-score"></p>
             <button id="continue-game-btn" class="main-action-button">Continuar Aventura</button>
         </main>
     </div>
 
     <div id="game-completion-screen" class="screen hidden">
-        <main class="completion-main">
-            <h1>¡Felicidades, Aventura Completada!</h1>
-            <p>Has terminado la aventura "<span id="final-game-title"></span>".</p>
+        <header>
+            <h1>¡Aventura Completada!</h1>
+        </header>
+        <main>
+            <p>¡Felicidades, Equipo! Has completado "<span id="final-game-title"></span>".</p>
             <div class="score-summary">
                 <p>Tu Puntuación Final: <span id="final-score"></span></p>
                 <p>Tiempo Total: <span id="final-time"></span></p>
@@ -168,11 +170,9 @@
     <div id="app-alert" class="app-alert hidden"></div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjGwZWAQdDbyrVAC4fX5CrQjCDiC8o=" crossorigin=""></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="player-supabase-config.js"></script>
-
     <script src="player-script.js"></script>
 </body>
 </html>
