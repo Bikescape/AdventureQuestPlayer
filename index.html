@@ -9,171 +9,127 @@
     <meta name="theme-color" content="#3b82f6">
     <link rel="apple-touch-icon" href="/icon-192x192.png">
     <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQRevjtmcCaISYgBNFIszBlBMt4jaYw=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
+    <div id="global-alert" class="global-alert hidden">
+        <span id="alert-message"></span>
+        <button id="close-alert-btn" class="close-alert-btn">&times;</button>
+    </div>
+
     <div id="loading-screen" class="screen">
-        <div class="loading-content">
-            <div class="logo">🧭 Aventura Quest</div>
-            <div class="loading-spinner"></div>
-            <p>Cargando aventura...</p>
-        </div>
+        <p>Cargando Aventura Quest...</p>
+        <div class="spinner"></div>
     </div>
 
     <div id="welcome-screen" class="screen hidden">
-        <header>
-            <h1>Bienvenido a Aventura Quest</h1>
-        </header>
-        <main>
-            <p>¡Prepárate para una emocionante búsqueda del tesoro al aire libre!</p>
-            <button id="start-new-game-flow-btn" class="main-action-button">Comenzar Nueva Aventura</button>
-        </main>
+        <h1>¡Bienvenido a Aventura Quest!</h1>
+        <p>Tu aventura comienza aquí. Prepárate para explorar, resolver misterios y competir.</p>
+        <button id="start-new-game-flow-btn" class="button-primary">Comenzar Nueva Aventura</button>
     </div>
 
     <div id="game-selection-screen" class="screen hidden">
-        <header>
-            <h1>Selecciona tu Aventura</h1>
-        </header>
-        <main>
-            <div id="game-list" class="card-grid">
-                <p>Cargando juegos activos...</p>
+        <h1>Selecciona una Aventura</h1>
+        <div id="game-list" class="game-list">
             </div>
-        </main>
+        <button id="back-to-welcome-btn" class="button-secondary">Volver</button>
     </div>
 
     <div id="game-details-screen" class="screen hidden">
-        <header>
-            <h1 id="game-detail-title"></h1>
-        </header>
-        <main>
-            <div class="game-details-content">
-                <p id="game-detail-description"></p>
-                <p><strong>Mecánica:</strong> <span id="game-detail-mechanics"></span></p>
-                <p class="initial-narrative-text" id="game-detail-initial-narrative"></p>
-                <div id="game-detail-media" class="narrative-media"></div>
+        <h1 id="game-detail-title"></h1>
+        <p id="game-detail-description"></p>
+        <p id="game-detail-mechanics"></p>
+        <p id="game-detail-initial-narrative"></p>
+        <div id="game-detail-media" class="media-container"></div>
+        <input type="text" id="team-name-input" placeholder="Introduce el nombre de tu equipo" required>
+        <button id="start-game-btn" class="button-primary">Comenzar Aventura</button>
+        <button id="back-to-game-selection-btn" class="button-secondary">Volver a Selección</button>
+    </div>
+
+    <div id="location-selection-screen" class="screen hidden">
+        <h1>Selecciona tu Punto de Partida</h1>
+        <p id="game-selection-initial-narrative"></p>
+        <div id="location-list-container" class="location-list">
             </div>
-            <div class="team-creation-section">
-                <h2>Crea tu Equipo</h2>
-                <input type="text" id="team-name-input" placeholder="Nombre de tu Equipo" required>
-                <button id="start-game-btn" class="main-action-button">Iniciar Juego</button>
-            </div>
-            <button id="back-to-game-selection-btn" class="secondary-action-button">Volver a Selección de Juego</button>
-        </main>
+        <button id="back-to-game-details-from-location-select-btn" class="button-secondary">Volver a Detalles del Juego</button>
     </div>
 
     <div id="game-active-screen" class="screen hidden">
-        <header class="game-header">
-            <div class="game-stats">
-                <span id="game-total-time">Tiempo Total: 00:00</span>
-                <span id="trial-timer">Tiempo Prueba: 00:00</span>
+        <div class="game-stats">
+            <p>Tiempo Total: <span id="game-total-time">00:00:00</span></p>
+            <p>Puntuación: <span id="current-score">0</span></p>
+        </div>
+        <div id="game-progress-display" class="progress-display">
             </div>
-            <div class="game-score">
-                Puntos: <span id="current-score">0</span>
-            </div>
-        </header>
-        <main class="game-main">
-            <section id="location-narrative-section" class="hidden">
-                <div class="card narrative-card">
-                    <h2 class="section-title">Narrativa de Ubicación</h2>
-                    <div id="location-narrative" class="narrative-content"></div>
-                </div>
-            </section>
 
-            <section id="trial-section">
-                <div class="card trial-card">
-                    <h2 class="section-title">Prueba Actual</h2>
-                    <div id="trial-narrative" class="narrative-content"></div>
-                    <div class="narrative-media">
-                        <img id="trial-image" class="narrative-image hidden" alt="Imagen de la prueba">
-                        <audio id="trial-audio" controls class="narrative-audio hidden"></audio>
-                    </div>
-
-                    <div id="text-trial-section" class="trial-section hidden">
-                        <p id="text-question" class="question-text"></p>
-                        <input type="text" id="text-answer-input" placeholder="Tu respuesta...">
-                        <div id="text-options-container" class="options-container hidden">
-                            </div>
-                        <button id="validate-answer-btn" class="btn btn-primary">Validar Respuesta</button>
-                        <div class="hint-info">
-                            <button id="hint-btn" class="btn btn-secondary hint-button">Pedir Pista (<span id="hint-cost"></span> pts)</button>
-                            <span class="hints-remaining">Pistas restantes: <span id="hints-remaining"></span></span>
-                        </div>
-                    </div>
-
-                    <div id="qr-trial-section" class="trial-section hidden">
-                        <div id="qr-scanner" class="qr-scanner-container"></div>
-                        <p class="qr-result-display">Resultado QR: <span id="qr-result"></span></p>
-                        <button id="qr-scan-btn" class="btn btn-primary">Escanear QR</button>
-                        <div class="hint-info">
-                            <button id="qr-hint-btn" class="btn btn-secondary hint-button">Pedir Pista (<span id="qr-hint-cost"></span> pts)</button>
-                            <span class="hints-remaining">Pistas restantes: <span id="qr-hints-remaining"></span></span>
-                        </div>
-                    </div>
-
-                    <div id="gps-trial-section" class="trial-section hidden">
-                        <p>Dirígete a la ubicación marcada en el mapa.</p>
-                        <div id="gps-map" class="map-container"></div>
-                        <div class="hint-info">
-                            <button id="gps-hint-btn" class="btn btn-secondary hint-button">Pedir Pista (<span id="gps-hint-cost"></span> pts)</button>
-                            <span class="hints-remaining">Pistas restantes: <span id="gps-hints-remaining"></span></span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div id="feedback-screen" class="screen hidden">
-        <main>
-            <h1 id="feedback-message"></h1>
-            <p id="feedback-score"></p>
-            <button id="continue-game-btn" class="main-action-button">Continuar Aventura</button>
-        </main>
-    </div>
-
-    <div id="game-completion-screen" class="screen hidden">
-        <header>
-            <h1>¡Aventura Completada!</h1>
-        </header>
-        <main>
-            <p>¡Felicidades, Equipo! Has completado "<span id="final-game-title"></span>".</p>
-            <div class="score-summary">
-                <p>Tu Puntuación Final: <span id="final-score"></span></p>
-                <p>Tiempo Total: <span id="final-time"></span></p>
-            </div>
-            <button id="play-again-btn" class="main-action-button">Jugar Otra Aventura</button>
-            <button id="view-final-rankings-btn" class="secondary-action-button">Ver Rankings Globales</button>
-        </main>
-    </div>
-
-    <div id="global-rankings-screen" class="screen hidden">
-        <header>
-            <h1>Rankings Globales</h1>
-        </header>
-        <main class="rankings-main">
-            <select id="global-rankings-game-select" class="full-width-select"></select>
-            <div id="global-rankings-list" class="card-grid">
-                <p>Cargando rankings...</p>
-            </div>
-            <button id="back-to-menu-from-rankings-btn" class="main-action-button">Volver al Menú Principal</button>
-        </main>
-    </div>
-
-    <div id="modal-container" class="modal-container hidden">
-        <div class="modal-content">
-            <h3 id="modal-title"></h3>
-            <p id="modal-message"></p>
-            <button id="modal-close-btn" class="btn btn-secondary">Cerrar</button>
+        <div id="location-narrative-section" class="narrative-section">
+            <h2 id="current-location-title"></h2>
+            <p id="location-narrative"></p>
+            <div id="location-media" class="media-container"></div>
+            <div id="location-arrival-map" class="map-container"></div>
+            <p id="location-arrival-message"></p>
+            <button id="start-location-trials-btn" class="button-primary hidden">Comenzar Pruebas</button>
         </div>
     </div>
 
-    <div id="app-alert" class="app-alert hidden"></div>
+    <div id="trial-screen" class="screen hidden">
+        <div class="trial-header">
+            <p>Tiempo de Prueba: <span id="trial-timer">00:00</span></p>
+            <p>Puntuación Actual: <span id="current-score-trial">0</span></p>
+        </div>
+        <h2 id="trial-question"></h2>
+        <div id="trial-media" class="media-container"></div>
 
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjGwZWAQdDbyrVAC4fX5CrQjCDiC8o=" crossorigin=""></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+        <div id="text-input-container">
+            <input type="text" id="answer-input" placeholder="Tu respuesta">
+            <button id="submit-answer-btn" class="button-primary">Enviar Respuesta</button>
+        </div>
+
+        <div id="qr-input-container">
+            <button id="qr-reader-btn" class="button-secondary">Escanear Código QR</button>
+            <div id="qr-reader-container" class="qr-reader-container hidden">
+                <div id="qr-reader" style="width: 100%;"></div>
+                <p>Código QR escaneado: <span id="qr-code-value"></span></p>
+                <button id="qr-submit-btn" class="button-primary">Enviar QR</button>
+            </div>
+        </div>
+
+        <div id="gps-input-container">
+            <div id="gps-map" class="map-container"></div>
+            <p id="gps-distance-message"></p>
+            <button id="gps-arrive-btn" class="button-primary hidden">Llegar al Punto GPS</button>
+        </div>
+
+        <button id="hint-btn" class="button-secondary">Pedir Pista</button>
+    </div>
+
+    <div id="feedback-screen" class="screen hidden">
+        <h2 id="feedback-message"></h2>
+        <p id="feedback-details"></p>
+        <p id="feedback-score-change"></p>
+        <button id="continue-game-btn" class="button-primary">Continuar Aventura</button>
+    </div>
+
+    <div id="final-screen" class="screen hidden">
+        <h1>¡Aventura Completada!</h1>
+        <p>Tu puntuación final: <span id="final-score"></span></p>
+        <p>Tiempo total: <span id="final-time"></span></p>
+        <h2>Clasificación Global</h2>
+        <ul id="final-ranking-list">
+            </ul>
+        <button id="start-new-game-again-btn" class="button-primary">Empezar Otra Aventura</button>
+    </div>
+
+    <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="modal-close-btn" class="close-button">&times;</span>
+            <h2 id="modal-title"></h2>
+            <p id="modal-message"></p>
+        </div>
+    </div>
+
     <script src="player-supabase-config.js"></script>
     <script src="player-script.js"></script>
 </body>
