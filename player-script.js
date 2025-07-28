@@ -30,7 +30,7 @@ const loadingScreen = document.getElementById('loading-screen');
 const welcomeScreen = document.getElementById('welcome-screen');
 const startNewGameFlowBtn = document.getElementById('start-new-game-flow-btn');
 const gameSelectionScreen = document.getElementById('game-selection-screen');
-const gameList = document.getElementById('game-list'); // Changed from gameListContainer for consistency
+const gameList = document.getElementById('game-list');
 
 const gameDetailsScreen = document.getElementById('game-details-screen');
 const gameDetailTitle = document.getElementById('game-detail-title');
@@ -39,7 +39,7 @@ const gameDetailMechanics = document.getElementById('game-detail-mechanics');
 const gameDetailInitialNarrative = document.getElementById('game-detail-initial-narrative');
 const gameDetailMedia = document.getElementById('game-detail-media'); // Container for image/audio
 const teamNameInput = document.getElementById('team-name-input');
-const startGameBtn = document.getElementById('start-game-btn'); // Renamed from createTeamBtn
+const startGameBtn = document.getElementById('start-game-btn');
 const backToGameSelectionBtn = document.getElementById('back-to-game-selection-btn');
 
 const gameActiveScreen = document.getElementById('game-active-screen');
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showScreen(gameActiveScreen);
             resumeGameTimers();
             await displayCurrentTrial();
-            showAlert('Reanudando juego como equipo: ' + currentTeam.Team, 'info'); // Using currentTeam.Team
+            showAlert('Reanudando juego como equipo: ' + currentTeam.name, 'info'); // Corregido: Team a name
             return;
         } else {
             localStorage.removeItem('currentTeamId');
@@ -243,7 +243,7 @@ async function fetchActiveGames() {
         .from('games')
         .select('*')
         .eq('is_active', true)
-        .order('title', { ascending: true }); // Assuming 'title' is consistent
+        .order('title', { ascending: true });
 
     if (error) {
         console.error('Error fetching active games:', error);
@@ -315,7 +315,7 @@ async function displayGameDetails(gameId) {
     showScreen(gameDetailsScreen);
 }
 
-// NEW LOGIC: Handle team creation/selection and then start game
+// Handle team creation/selection and then start game
 if (startGameBtn) {
     startGameBtn.addEventListener('click', async () => {
         const teamName = teamNameInput.value.trim();
@@ -329,11 +329,11 @@ if (startGameBtn) {
             return;
         }
 
-        // 1. Intentar encontrar el equipo usando el nombre de columna 'Team'
+        // 1. Intentar encontrar el equipo usando el nombre de columna 'name'
         let { data: existingTeam, error: teamCheckError } = await supabase
             .from('teams')
             .select('id')
-            .eq('Team', teamName) // Corrected: team_name -> Team
+            .eq('name', teamName) // Corregido: Team a name
             .eq('game_id', currentGame.id)
             .single();
 
@@ -347,11 +347,11 @@ if (startGameBtn) {
             showAlert(`El equipo "${teamName}" ya existe para este juego. Por favor, elige otro nombre.`, 'warning');
             return;
         } else {
-            // 2. Si el equipo NO existe, crearlo, usando 'Team'
+            // 2. Si el equipo NO existe, crearlo, usando 'name'
             const { data: newTeam, error: createError } = await supabase
                 .from('teams')
                 .insert({
-                    Team: teamName, // Corrected: team_name -> Team
+                    name: teamName, // Corregido: Team a name
                     game_id: currentGame.id,
                     current_location_id: null,
                     current_trial_id: null,
@@ -392,12 +392,12 @@ async function initializeGameFlowForTeam() {
 
     localStorage.setItem('currentTeamId', currentTeam.id); // Persist team ID
 
-    // Fetch locations for the current game, using 'locations_order'
+    // Fetch locations for the current game, using 'order_index'
     const { data: locationsData, error: locError } = await supabase
         .from('locations')
         .select('*')
         .eq('game_id', currentGame.id)
-        .order('locations_order', { ascending: true }); // Corrected: order_index -> locations_order
+        .order('order_index', { ascending: true }); // Corregido: locations_order a order_index
 
     if (locError) {
         console.error('Error fetching locations:', locError);
@@ -475,12 +475,12 @@ async function loadTeamState(teamId) {
         currentTeam = data;
         currentGame = data.games;
 
-        // Fetch all locations for the current game, using 'locations_order'
+        // Fetch all locations for the current game, using 'order_index'
         const { data: locations, error: locError } = await supabase
             .from('locations')
             .select('*')
             .eq('game_id', currentGame.id)
-            .order('locations_order', { ascending: true }); // Corrected: order_index -> locations_order
+            .order('order_index', { ascending: true }); // Corregido: locations_order a order_index
         if (locError) {
             console.error('Error fetching locations for loaded game:', locError);
             showAlert('Error al cargar ubicaciones para juego reanudado.', 'error');
@@ -496,13 +496,13 @@ async function loadTeamState(teamId) {
             currentLocationIndex = 0;
         }
 
-        // Fetch trials for the current location, assuming 'order_index' for trials
+        // Fetch trials for the current location, using 'order_index' for trials
         if (currentTeam.current_location_id) {
             const { data: trials, error: trialError } = await supabase
                 .from('trials')
                 .select('*')
                 .eq('location_id', currentTeam.current_location_id)
-                .order('order_index', { ascending: true }); // Assuming 'order_index' for trials
+                .order('order_index', { ascending: true }); // Mantenido 'order_index' para trials
             if (trialError) {
                 console.error('Error fetching trials for loaded location:', trialError);
                 showAlert('Error al cargar pruebas para ubicación reanudada.', 'error');
@@ -542,9 +542,10 @@ async function displayLocationNarrative(location) {
     gpsTrialSection.classList.add('hidden');
     locationNarrativeSection.classList.remove('hidden'); // Show location narrative section
 
+    // Usar 'initial_narrative' de la tabla locations
     locationNarrativeDisplay.innerHTML = `
         <h2>${location.name}</h2>
-        <p>${location.narrative}</p>
+        <p>${location.initial_narrative}</p>
         ${location.image_url ? `<img src="${location.image_url}" alt="Ubicación" class="narrative-image">` : ''}
         ${location.audio_url ? `<audio controls src="${location.audio_url}"></audio>` : ''}
         <button id="start-location-trials-btn" class="main-action-button">Comenzar Pruebas</button>
@@ -558,7 +559,7 @@ async function displayLocationNarrative(location) {
                 .from('trials')
                 .select('*')
                 .eq('location_id', location.id)
-                .order('order_index', { ascending: true }); // Assuming 'order_index' for trials
+                .order('order_index', { ascending: true }); // Mantenido 'order_index' para trials
 
             if (trialError) {
                 console.error('Error fetching trials for location:', trialError);
@@ -633,7 +634,7 @@ async function displayCurrentTrial() {
 
     const hintInfo = currentTeam.pistas_used_per_trial.find(h => h.trialId === currentTrial.id);
     const hintsUsed = hintInfo ? hintInfo.count : 0;
-    const hintsRemaining = (currentTrial.max_hints || 0) - hintsUsed;
+    const hintsRemaining = (currentTrial.hint_count || 0) - hintsUsed; // Usando 'hint_count'
 
     // Reset all hint displays and buttons
     [hintBtn, qrHintBtn, gpsHintBtn].forEach(btn => {
@@ -642,7 +643,7 @@ async function displayCurrentTrial() {
         }
     });
 
-    switch (currentTrial.type) {
+    switch (currentTrial.trial_type) { // Usando 'trial_type'
         case 'QR':
             qrTrialSection.classList.remove('hidden');
             qrResultDisplay.textContent = '';
@@ -654,15 +655,15 @@ async function displayCurrentTrial() {
         case 'GPS':
             gpsTrialSection.classList.remove('hidden');
             gpsMapContainer.classList.remove('hidden');
-            // Assuming 'latitude', 'longitude', 'tolerance' are consistent
-            initializePlayerMap(currentTrial.latitude, currentTrial.longitude, currentTrial.tolerance);
+            // Usando 'latitude', 'longitude', 'tolerance_meters'
+            initializePlayerMap(currentTrial.latitude, currentTrial.longitude, currentTrial.tolerance_meters);
             if (gpsHintsRemainingDisplay) gpsHintsRemainingDisplay.textContent = hintsRemaining;
             if (gpsHintCostDisplay) gpsHintCostDisplay.textContent = currentTrial.hint_cost || 0;
             if (gpsHintBtn && hintsRemaining > 0) gpsHintBtn.classList.remove('hidden');
             break;
         case 'TEXT':
             textTrialSection.classList.remove('hidden');
-            // Assuming 'question' is consistent
+            // Usando 'question'
             textQuestionDisplay.textContent = currentTrial.question;
             textAnswerInput.value = '';
             textAnswerInput.classList.remove('hidden');
@@ -674,42 +675,57 @@ async function displayCurrentTrial() {
             if (hintBtn && hintsRemaining > 0) hintBtn.classList.remove('hidden');
 
             switch (currentTrial.answer_type) {
-                case 'SINGLE':
+                case 'SINGLE_CHOICE': // Corregido el valor del CSV
                 case 'NUMERIC':
                     break;
-                case 'MULTIPLE_CHOICE':
+                case 'MULTIPLE_OPTIONS': // Corregido el valor del CSV
                     textOptionsContainer.classList.remove('hidden');
                     textAnswerInput.classList.add('hidden');
-                    currentTrial.options.split(';').forEach((option, index) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn btn-option';
-                        btn.textContent = option.trim();
-                        btn.dataset.value = option.trim();
-                        btn.addEventListener('click', (e) => {
-                            textAnswerInput.value = e.target.dataset.value;
-                            validateAnswerBtn.click();
+                    // Options en CSV viene como un JSON string, necesitamos parsearlo
+                    try {
+                        const optionsArray = JSON.parse(currentTrial.options);
+                        optionsArray.forEach((option) => {
+                            const btn = document.createElement('button');
+                            btn.className = 'btn btn-option';
+                            btn.textContent = option.trim();
+                            btn.dataset.value = option.trim();
+                            btn.addEventListener('click', (e) => {
+                                textAnswerInput.value = e.target.dataset.value;
+                                validateAnswerBtn.click();
+                            });
+                            textOptionsContainer.appendChild(btn);
                         });
-                        textOptionsContainer.appendChild(btn);
-                    });
+                    } catch (e) {
+                        console.error('Error parsing options for TEXT trial:', e);
+                        showAlert('Error cargando opciones de la prueba. Consulta al administrador.', 'error');
+                    }
                     break;
                 case 'ORDERING':
                     textOptionsContainer.classList.remove('hidden');
                     textAnswerInput.classList.add('hidden');
-                    currentTrial.options.split(';').forEach((option, index) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn btn-option-ordering';
-                        btn.textContent = option.trim();
-                        btn.dataset.value = option.trim();
-                        btn.addEventListener('click', () => {
-                            if (textAnswerInput.value === '') {
-                                textAnswerInput.value = btn.dataset.value;
-                            } else {
-                                textAnswerInput.value += ';' + btn.dataset.value;
-                            }
-                            showAlert(`Añadido: ${btn.dataset.value}`, 'info');
+                    // Options en CSV viene como un JSON string, necesitamos parsearlo
+                    try {
+                        const optionsArray = JSON.parse(currentTrial.options);
+                        optionsArray.forEach((option) => {
+                            const btn = document.createElement('button');
+                            btn.className = 'btn btn-option-ordering';
+                            btn.textContent = option.trim();
+                            btn.dataset.value = option.trim();
+                            btn.addEventListener('click', () => {
+                                if (textAnswerInput.value === '') {
+                                    textAnswerInput.value = btn.dataset.value;
+                                } else {
+                                    textAnswerInput.value += ';' + btn.dataset.value;
+                                }
+                                showAlert(`Añadido: ${btn.dataset.value}`, 'info');
+                            });
+                            textOptionsContainer.appendChild(btn);
                         });
-                        textOptionsContainer.appendChild(btn);
-                    });
+                    } catch (e) {
+                        console.error('Error parsing options for TEXT trial:', e);
+                        showAlert('Error cargando opciones de la prueba. Consulta al administrador.', 'error');
+                    }
+
                     const clearOrderBtn = document.createElement('button');
                     clearOrderBtn.className = 'btn btn-secondary';
                     clearOrderBtn.textContent = 'Limpiar Orden';
@@ -722,8 +738,8 @@ async function displayCurrentTrial() {
             }
             break;
         default:
-            showAlert('Tipo de prueba no reconocido: ' + currentTrial.type, 'error');
-            showModal('Error de Prueba', `El tipo de prueba '${currentTrial.type}' no es reconocido. Contacta al administrador.`);
+            showAlert('Tipo de prueba no reconocido: ' + currentTrial.trial_type, 'error');
+            showModal('Error de Prueba', `El tipo de prueba '${currentTrial.trial_type}' no es reconocido. Contacta al administrador.`);
             break;
     }
     startTrialTimer();
@@ -739,7 +755,7 @@ async function completeTrial(pointsAwarded) {
 
     const currentTrial = currentTrials[currentTrialIndex];
     const hintsUsedInThisTrial = currentTeam.pistas_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
-    // Assuming 'hint_cost' is consistent
+    // Usando 'hint_cost'
     finalTrialScore -= (hintsUsedInThisTrial * (currentTrial.hint_cost || 0));
     finalTrialScore = Math.max(0, finalTrialScore);
 
@@ -868,7 +884,7 @@ if (validateAnswerBtn) {
         }
 
         let userAnswer = '';
-        const currentTrialType = currentTrial.type;
+        const currentTrialType = currentTrial.trial_type; // Usando 'trial_type'
         const currentAnswerType = currentTrial.answer_type;
 
         if (currentTrialType === 'TEXT') {
@@ -892,20 +908,22 @@ if (validateAnswerBtn) {
         }
 
         let isCorrect = false;
-        let basePoints = currentTrial.base_score || 100; // Assuming 'base_score' is consistent
+        let basePoints = currentGame.initial_score_per_trial || 100; // Usando initial_score_per_trial de game
 
         switch (currentTrialType) {
             case 'TEXT':
+                // Asegurar que la comparación sea case-insensitive y maneje números si `correct_answer` es string
                 if (currentAnswerType === 'NUMERIC') {
-                    isCorrect = userAnswer === parseFloat(currentTrial.correct_answer); // Assuming 'correct_answer'
-                } else if (currentAnswerType === 'MULTIPLE_CHOICE' || currentAnswerType === 'SINGLE') {
+                    isCorrect = userAnswer === parseFloat(currentTrial.correct_answer);
+                } else if (currentAnswerType === 'MULTIPLE_OPTIONS' || currentAnswerType === 'SINGLE_CHOICE') { // Corregidos nombres de tipos
                     isCorrect = userAnswer.toLowerCase() === currentTrial.correct_answer.toLowerCase();
                 } else if (currentAnswerType === 'ORDERING') {
+                    // Para ordenación, el CSV guarda "OpciónA;OpciónB", comparamos strings directamente
                     isCorrect = userAnswer.toLowerCase() === currentTrial.correct_answer.toLowerCase();
                 }
                 break;
             case 'QR':
-                isCorrect = userAnswer === currentTrial.qr_content; // Assuming 'qr_content'
+                isCorrect = userAnswer === currentTrial.qr_content;
                 break;
             case 'GPS':
                 isCorrect = false; // Handled by watchPosition
@@ -931,8 +949,8 @@ if (validateAnswerBtn) {
             }
 
             const hintsUsedInThisTrial = currentTeam.pistas_used_per_trial.find(h => h.trialId === currentTrial.id)?.count || 0;
-            // Assuming 'max_hints' and 'hint_cost' are consistent
-            if (hintsUsedInThisTrial >= (currentTrial.max_hints || 0)) {
+            // Usando 'hint_count' y 'hint_cost'
+            if (hintsUsedInThisTrial >= (currentTrial.hint_count || 0)) {
                 showAlert('No quedan más pistas para esta prueba.', 'warning');
                 e.target.classList.add('hidden');
                 return;
@@ -968,7 +986,7 @@ if (validateAnswerBtn) {
             currentTeam.pistas_used_global = (currentTeam.pistas_used_global || 0) + 1;
             currentTeam.pistas_used_per_trial = updatedPistasUsedPerTrial; // Ensure local state is updated
 
-            const newHintsRemaining = (currentTrial.max_hints || 0) - (hintsUsedInThisTrial + 1);
+            const newHintsRemaining = (currentTrial.hint_count || 0) - (hintsUsedInThisTrial + 1);
 
             if (e.target === hintBtn) hintsRemainingDisplay.textContent = newHintsRemaining;
             if (e.target === qrHintBtn && qrHintsRemainingDisplay) qrHintsRemainingDisplay.textContent = newHintsRemaining;
@@ -979,7 +997,7 @@ if (validateAnswerBtn) {
             if (newHintsRemaining <= 0) {
                 e.target.classList.add('hidden');
             }
-            showModal('Pista', currentTrial.hint_content || 'No hay contenido de pista disponible para esta prueba.'); // Assuming 'hint_content'
+            showModal('Pista', currentTrial.hint_content || 'No hay contenido de pista disponible para esta prueba.'); // Usando 'hint_content'
         });
     }
 });
@@ -1007,7 +1025,7 @@ function initializePlayerMap(targetLat, targetLng, tolerance) {
         fillColor: '#f03',
         fillOpacity: 0.5,
         radius: 8
-    }).addTo(playerMap).bindPopup(`Objetivo: ${currentTrial.name || 'Prueba'}`).openPopup(); // Assuming 'name' for trial
+    }).addTo(playerMap).bindPopup(`Objetivo: ${currentTrial.narrative || 'Prueba'}`).openPopup(); // Usando 'narrative' para la prueba
 
     L.circle([targetLat, targetLng], {
         color: 'blue',
@@ -1055,10 +1073,11 @@ function startGpsWatch(targetLat, targetLng, tolerance) {
             const distance = getDistance(latitude, longitude, targetLat, targetLng);
             console.log(`Distancia al objetivo: ${distance.toFixed(2)} metros`);
 
-            if (distance <= tolerance) {
+            // Asegurarse de usar tolerance_meters del trial
+            if (distance <= currentTrial.tolerance_meters) {
                 showAlert('¡Ubicación alcanzada! Validando prueba...', 'success');
                 stopGpsWatch();
-                await completeTrial(currentTrial.base_score || 100);
+                await completeTrial(currentGame.initial_score_per_trial || 100);
             }
         },
         (error) => {
@@ -1126,10 +1145,9 @@ function startQrScanner() {
         qrResultDisplay.textContent = decodedText;
         showAlert('QR Escaneado: ' + decodedText, 'info');
 
-        // Assuming 'qr_content' for QR trials
-        if (currentTrial && currentTrial.type === 'QR' && currentTrial.qr_content === decodedText) {
+        if (currentTrial && currentTrial.trial_type === 'QR' && currentTrial.qr_content === decodedText) { // Usando 'trial_type'
             showAlert('¡QR Correcto! Validando prueba...', 'success');
-            await completeTrial(currentTrial.base_score || 100);
+            await completeTrial(currentGame.initial_score_per_trial || 100); // Usando initial_score_per_trial
         } else {
             showAlert('QR incorrecto o no corresponde a esta prueba.', 'error');
         }
@@ -1164,7 +1182,7 @@ async function populateRankingGameSelect() {
     const { data, error } = await supabase
         .from('games')
         .select('id, title')
-        .order('title', { ascending: true }); // Assuming 'title' is consistent
+        .order('title', { ascending: true });
 
     if (error) {
         console.error('Error fetching games for rankings select:', error);
@@ -1186,8 +1204,8 @@ async function fetchGlobalRankings(gameId = null) {
         .from('rankings')
         .select(`
             *,
-            teams (Team), // Corrected: team_name -> Team
-            games (title) // Assuming 'title' is consistent
+            teams (name), // Corregido: Team a name
+            games (title)
         `)
         .order('final_score', { ascending: false })
         .order('completion_time', { ascending: true });
@@ -1215,7 +1233,7 @@ async function fetchGlobalRankings(gameId = null) {
         const rankCard = document.createElement('div');
         rankCard.className = 'card ranking-card';
         rankCard.innerHTML = `
-            <h3>#${index + 1} - ${rank.teams ? rank.teams.Team : 'Equipo Desconocido'}</h3> <p>Puntuación Final: <span>${rank.final_score}</span></p>
+            <h3>#${index + 1} - ${rank.teams ? rank.teams.name : 'Equipo Desconocido'}</h3> <p>Puntuación Final: <span>${rank.final_score}</span></p>
             <p>Tiempo de Completado: <span>${formatTime(rank.completion_time)}</span></p>
             <p>Juego: <span>${rank.games ? rank.games.title : 'Desconocido'}</span></p>
             <p>Fecha: <span>${new Date(rank.completion_date).toLocaleDateString()}</span></p>
@@ -1250,7 +1268,7 @@ if (playAgainBtn) {
         stopTrialTimer();
         stopGpsWatch();
         stopQrScanner();
-        localStorage.removeItem('currentTeamId');
+        localStorage.removeItem('currentTeamId'); // Clear any residual state
         showScreen(gameSelectionScreen);
         fetchActiveGames();
     });
