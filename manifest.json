@@ -1,7 +1,7 @@
 {
   "name": "Aventura de Búsqueda del Tesoro",
   "short_name": "Aventura",
-  "start_url": "/player/index.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#fff3e0",
   "theme_color": "#ff9800",
