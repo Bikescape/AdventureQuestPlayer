@@ -152,7 +152,6 @@ async function initWelcomeScreen() {
 function attachEventListeners() {
     buttons.backToWelcome.addEventListener('click', initWelcomeScreen);
     buttons.startGame.addEventListener('click', startGame);
-    buttons.narrativeContinue.addEventListener('click', handleNarrativeContinue);
     UIElements.hintBtn.addEventListener('click', requestHint);
     buttons.closeHint.addEventListener('click', () => UIElements.hintModal.classList.add('hidden'));
     buttons.validateAnswer.addEventListener('click', validateCurrentAnswer);
@@ -292,8 +291,9 @@ async function startGame() {
         resumeGame();
 
     } catch (error) {
-        console.error("Error starting game:", error);
-        showAlert('Error al iniciar la partida. Inténtalo de nuevo.', 'error');
+        // CAMBIO IMPORTANTE: Muestra el mensaje de error específico de Supabase
+        console.error("Error starting game:", error.message || error); 
+        showAlert(`Error al iniciar la partida: ${error.message}`, 'error');
         showScreen('gameDetail');
     }
 }
