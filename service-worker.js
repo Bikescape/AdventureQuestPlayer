@@ -3,15 +3,15 @@
 const CACHE_NAME = 'treasure-hunt-cache-v1';
 const urlsToCache = [
   '/',
-  '/player/index.html',
-  '/player/player-styles.css',
-  '/player/player-script.js',
-  '/player/player-supabase-config.js',
+  '/index.html',
+  '/player-styles.css',
+  '/player-script.js',
+  '/player-supabase-config.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   // Añade aquí los iconos y otros assets estáticos que quieras cachear
-  '/player/icons/icon-192x192.png',
-  '/player/icons/icon-512x512.png'
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 self.addEventListener('install', event => {
