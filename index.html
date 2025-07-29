@@ -2,136 +2,147 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aventura Quest</title>
-    html <base href="/AdventureQuestPlayer/"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Búsqueda del Tesoro</title>
+    
+    <meta name="theme-color" content="#ff9800"/>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
     <link rel="stylesheet" href="player-styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
-    <meta name="theme-color" content="#3b82f6">
-    <link rel="apple-touch-icon" href="/icon-192x192.png">
-    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
 </head>
 <body>
-    <div id="global-alert" class="global-alert hidden">
-        <span id="alert-message"></span>
-        <button id="close-alert-btn" class="close-alert-btn">&times;</button>
-    </div>
 
-    <div id="loading-screen" class="screen">
-        <p>Cargando Aventura Quest...</p>
-        <div class="spinner"></div>
-    </div>
-
-    <div id="welcome-screen" class="screen hidden">
-        <h1>¡Bienvenido a Aventura Quest!</h1>
-        <p>Tu aventura comienza aquí. Prepárate para explorar, resolver misterios y competir.</p>
-        <button id="start-new-game-flow-btn" class="button-primary">Comenzar Nueva Aventura</button>
-    </div>
-
-    <div id="game-selection-screen" class="screen hidden">
-        <h1>Selecciona una Aventura</h1>
-        <div id="game-list" class="game-list">
+    <header id="game-header" class="hidden">
+        <div id="team-info">
+            <span id="team-name-display"></span>
+        </div>
+        <div id="game-stats">
+            <div class="stat-item">
+                <span class="stat-label">Puntos</span>
+                <span id="score-display">0</span>
             </div>
-        <button id="back-to-welcome-btn" class="button-secondary">Volver</button>
-    </div>
-
-    <div id="game-details-screen" class="screen hidden">
-        <h1 id="game-detail-title"></h1>
-        <p id="game-detail-description"></p>
-        <p id="game-detail-mechanics"></p>
-        <p id="game-detail-initial-narrative"></p>
-        <div id="game-detail-media" class="media-container"></div>
-        <input type="text" id="team-name-input" placeholder="Introduce el nombre de tu equipo" required>
-        <button id="start-game-btn" class="button-primary">Comenzar Aventura</button>
-        <button id="back-to-game-selection-btn" class="button-secondary">Volver a Selección</button>
-    </div>
-
-    <div id="location-selection-screen" class="screen hidden">
-        <h1>Selecciona tu Punto de Partida</h1>
-        <p id="game-selection-initial-narrative"></p>
-        <div id="location-list-container" class="location-list">
-            </div>
-        <button id="back-to-game-details-from-location-select-btn" class="button-secondary">Volver a Detalles del Juego</button>
-    </div>
-
-    <div id="game-active-screen" class="screen hidden">
-        <div class="game-stats">
-            <p>Tiempo Total: <span id="game-total-time">00:00:00</span></p>
-            <p>Puntuación: <span id="current-score">0</span></p>
-        </div>
-        <div id="game-progress-display" class="progress-display">
-            </div>
-
-        <div id="location-narrative-section" class="narrative-section">
-            <h2 id="current-location-title"></h2>
-            <p id="location-narrative"></p>
-            <div id="location-media" class="media-container"></div>
-            <div id="location-arrival-map" class="map-container"></div>
-            <p id="location-arrival-message"></p>
-            <button id="start-location-trials-btn" class="button-primary hidden">Comenzar Pruebas</button>
-        </div>
-    </div>
-
-    <div id="trial-screen" class="screen hidden">
-        <div class="trial-header">
-            <p>Tiempo de Prueba: <span id="trial-timer">00:00</span></p>
-            <p>Puntuación Actual: <span id="current-score-trial">0</span></p>
-        </div>
-        <h2 id="trial-question"></h2>
-        <div id="trial-media" class="media-container"></div>
-
-        <div id="text-input-container">
-            <input type="text" id="answer-input" placeholder="Tu respuesta">
-            <button id="submit-answer-btn" class="button-primary">Enviar Respuesta</button>
-        </div>
-
-        <div id="qr-input-container">
-            <button id="qr-reader-btn" class="button-secondary">Escanear Código QR</button>
-            <div id="qr-reader-container" class="qr-reader-container hidden">
-                <div id="qr-reader" style="width: 100%;"></div>
-                <p>Código QR escaneado: <span id="qr-code-value"></span></p>
-                <button id="qr-submit-btn" class="button-primary">Enviar QR</button>
+            <div class="stat-item">
+                <span class="stat-label">Tiempo Total</span>
+                <span id="total-timer-display">00:00</span>
             </div>
         </div>
+    </header>
 
-        <div id="gps-input-container">
-            <div id="gps-map" class="map-container"></div>
-            <p id="gps-distance-message"></p>
-            <button id="gps-arrive-btn" class="button-primary hidden">Llegar al Punto GPS</button>
+    <main id="app-container">
+
+        <section id="loading-screen" class="screen">
+            <div class="loading-spinner"></div>
+            <p>Cargando Aventura...</p>
+        </section>
+
+        <section id="welcome-screen" class="screen hidden">
+            <h1>Aventuras Disponibles</h1>
+            <div id="game-list-container">
+                <p>Buscando juegos activos...</p>
+            </div>
+        </section>
+
+        <section id="game-detail-screen" class="screen hidden">
+            <div class="content-box">
+                <h2 id="game-detail-title"></h2>
+                <h3>Introducción</h3>
+                <p id="game-detail-initial-narrative"></p>
+                <h3>Descripción</h3>
+                <p id="game-detail-description"></p>
+                <h3>Mecánica</h3>
+                <p id="game-detail-mechanics"></p>
+            </div>
+            <div id="start-form-container">
+                <input type="text" id="team-name-input" placeholder="Nombre de tu equipo" required>
+                <button id="start-game-btn" class="action-button">¡Comenzar Aventura!</button>
+                <button id="back-to-welcome-btn" class="secondary-button">Elegir otra aventura</button>
+            </div>
+        </section>
+
+        <section id="game-play-screen" class="screen hidden">
+            
+            <div id="narrative-view" class="game-view hidden">
+                <div class="content-box narrative-box">
+                    <img id="narrative-image" src="" alt="Imagen de la narrativa" class="hidden">
+                    <audio id="narrative-audio" src=""></audio>
+                    <p id="narrative-text"></p>
+                    <button id="narrative-continue-btn" class="action-button">Continuar</button>
+                </div>
+            </div>
+
+            <div id="location-navigation-view" class="game-view hidden">
+                 <div class="content-box">
+                    <h2 id="nav-location-name"></h2>
+                    <p id="nav-pre-arrival-narrative"></p>
+                </div>
+                <div id="location-map" class="map-container"></div>
+                <p id="distance-info">Calculando distancia...</p>
+                 <div class="arrival-status">
+                    <div id="arrival-progress-bar"></div>
+                    <span>Acércate al objetivo para desbloquear la ubicación...</span>
+                </div>
+            </div>
+
+            <div id="list-view" class="game-view hidden">
+                <h2 id="list-title"></h2>
+                <div id="list-items-container"></div>
+            </div>
+            
+            <div id="trial-view" class="game-view hidden">
+                <div class="content-box">
+                    <div id="trial-header">
+                        <div id="trial-timer-display" class="trial-timer">00:00</div>
+                    </div>
+                    <img id="trial-image" src="" alt="Imagen de la prueba" class="hidden">
+                    <audio id="trial-audio" src=""></audio>
+                    <p id="trial-narrative"></p>
+                </div>
+
+                <div id="trial-content"></div>
+
+                <div class="trial-actions">
+                    <button id="hint-btn" class="hint-button">Pedir Pista (-<span id="hint-cost-display">10</span> pts)</button>
+                    <button id="validate-answer-btn" class="action-button">Validar</button>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="game-over-screen" class="screen hidden">
+            <div class="content-box">
+                <h2>¡Aventura Completada!</h2>
+                <p>¡Enhorabuena, <span id="final-team-name"></span>!</p>
+                <div class="final-stats">
+                    <p><strong>Puntuación Final:</strong> <span id="final-score"></span></p>
+                    <p><strong>Tiempo Total:</strong> <span id="final-time"></span></p>
+                </div>
+                <h3>Ranking del Juego</h3>
+                <div id="final-ranking-container"></div>
+                <button id="play-again-btn" class="action-button">Jugar de Nuevo</button>
+            </div>
+        </section>
+    </main>
+    
+    <div id="app-alert" class="hidden"></div>
+    <div id="qr-scanner-modal" class="hidden">
+        <div id="qr-reader"></div>
+        <button id="close-qr-scanner-btn">Cerrar Escáner</button>
+    </div>
+    <div id="hint-modal" class="hidden">
+        <div class="hint-content">
+            <h3>Pista</h3>
+            <p id="hint-text"></p>
+            <button id="close-hint-btn">Entendido</button>
         </div>
-
-        <button id="hint-btn" class="button-secondary">Pedir Pista</button>
     </div>
 
-    <div id="feedback-screen" class="screen hidden">
-        <h2 id="feedback-message"></h2>
-        <p id="feedback-details"></p>
-        <p id="feedback-score-change"></p>
-        <button id="continue-game-btn" class="button-primary">Continuar Aventura</button>
-    </div>
 
-    <div id="final-screen" class="screen hidden">
-        <h1>¡Aventura Completada!</h1>
-        <p>Tu puntuación final: <span id="final-score"></span></p>
-        <p>Tiempo total: <span id="final-time"></span></p>
-        <h2>Clasificación Global</h2>
-        <ul id="final-ranking-list">
-            </ul>
-        <button id="start-new-game-again-btn" class="button-primary">Empezar Otra Aventura</button>
-    </div>
-
-    <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <span id="modal-close-btn" class="close-button">&times;</span>
-            <h2 id="modal-title"></h2>
-            <p id="modal-message"></p>
-        </div>
-    </div>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="player-supabase-config.js"></script>
     <script src="player-script.js"></script>
 </body>
