@@ -243,6 +243,7 @@ async function startGame() {
                 total_score: 0,
                 progress_log: [],
                 hints_used_per_trial: [],
+                hints_used_global: 0,
                 is_completed: false
             })
             .select()
@@ -282,6 +283,7 @@ async function startGame() {
             totalScore: 0,
             startTime: startTime.toISOString(),
             progressLog: [],
+            globalHintsUsed: 0,
             isCompleted: false,
         };
 
@@ -319,15 +321,16 @@ async function syncStateWithSupabase() {
     if (!gameState.teamId) return;
 
     const updates = {
-        current_location_id: gameState.gameData.locations[gameState.currentLocationIndex]?.id || null,
-        current_trial_id: gameState.gameData.locations[gameState.currentLocationIndex]?.trials[gameState.currentTrialIndex]?.id || null,
-        total_score: gameState.totalScore,
-        progress_log: gameState.progressLog,
-        hints_used_per_trial: gameState.hints_used_per_trial || [],
-        total_time_seconds: Math.floor((new Date() - new Date(gameState.startTime)) / 1000),
-        is_completed: gameState.isCompleted,
-        last_activity: new Date().toISOString()
-    };
+    current_location_id: gameState.gameData.locations[gameState.currentLocationIndex]?.id || null,
+    current_trial_id: gameState.gameData.locations[gameState.currentLocationIndex]?.trials[gameState.currentTrialIndex]?.id || null,
+    total_score: gameState.totalScore,
+    progress_log: gameState.progressLog,
+    hints_used_per_trial: gameState.hints_used_per_trial || [],
+    hints_used_global: gameState.globalHintsUsed, // <-- AÑADIDO
+    total_time_seconds: Math.floor((new Date() - new Date(gameState.startTime)) / 1000),
+    is_completed: gameState.isCompleted,
+    last_activity: new Date().toISOString()
+};
 
     const { error } = await supabase
         .from('teams')
@@ -744,6 +747,7 @@ function requestHint() {
     gameState.totalScore = Math.max(0, gameState.totalScore - trial.hint_cost);
     UIElements.scoreDisplay.textContent = gameState.totalScore;
     hintsUsedData.count++;
+    gameState.globalHintsUsed++; // <-- AÑADIDO: Incrementa el contador global
 
     UIElements.hintBtn.disabled = hintsUsedData.count >= trial.hint_count;
     
