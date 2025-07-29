@@ -242,7 +242,7 @@ async function startGame() {
                 last_activity: startTime,
                 total_score: 0,
                 progress_log: [],
-                pistas_used_per_trial: [],
+                hints_used_per_trial: [],
                 is_completed: false
             })
             .select()
@@ -323,7 +323,7 @@ async function syncStateWithSupabase() {
         current_trial_id: gameState.gameData.locations[gameState.currentLocationIndex]?.trials[gameState.currentTrialIndex]?.id || null,
         total_score: gameState.totalScore,
         progress_log: gameState.progressLog,
-        pistas_used_per_trial: gameState.pistas_used_per_trial || [],
+        hints_used_per_trial: gameState.hints_used_per_trial || [],
         total_time_seconds: Math.floor((new Date() - new Date(gameState.startTime)) / 1000),
         is_completed: gameState.isCompleted,
         last_activity: new Date().toISOString()
@@ -716,11 +716,11 @@ function requestHint() {
     const trial = getCurrentTrial();
     if (!trial) return;
 
-    let hintsUsedData = gameState.pistas_used_per_trial?.find(p => p.trialId === trial.id);
+    let hintsUsedData = gameState.hints_used_per_trial?.find(p => p.trialId === trial.id);
     if (!hintsUsedData) {
         hintsUsedData = { trialId: trial.id, count: 0 };
-        if (!gameState.pistas_used_per_trial) gameState.pistas_used_per_trial = [];
-        gameState.pistas_used_per_trial.push(hintsUsedData);
+        if (!gameState.hints_used_per_trial) gameState.hints_used_per_trial = [];
+        gameState.hints_used_per_trial.push(hintsUsedData);
     }
 
     if (hintsUsedData.count >= trial.hint_count) {
@@ -975,6 +975,6 @@ function isTrialCompleted(trialId) {
 }
 
 function getHintsUsedForTrial(trialId) {
-    const hintData = gameState.pistas_used_per_trial?.find(p => p.trialId === trialId);
+    const hintData = gameState.hints_used_per_trial?.find(p => p.trialId === trialId);
     return hintData ? hintData.count : 0;
 }
