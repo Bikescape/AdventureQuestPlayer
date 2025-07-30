@@ -36,7 +36,7 @@ const UIElements = {
     narrativeAudio: document.getElementById('narrative-audio'),
     narrativeText: document.getElementById('narrative-text'),
     navLocationName: document.getElementById('nav-location-name'),
-    navPreArrivalNarrative: document: document.getElementById('nav-pre-arrival-narrative'),
+    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
     distanceInfo: document.getElementById('distance-info'),
     listTitle: document.getElementById('list-title'),
     listItemsContainer: document.getElementById('list-items-container'),
