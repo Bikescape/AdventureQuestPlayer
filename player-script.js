@@ -52,6 +52,9 @@ const UIElements = {
     qrScannerModal: document.getElementById('qr-scanner-modal'),
     hintModal: document.getElementById('hint-modal'),
     hintText: document.getElementById('hint-text'),
+    // NUEVOS ELEMENTOS DEL DOM para los botones de "Volver"
+    backToLocationListBtn: document.getElementById('back-to-location-list-btn'),
+    backToTrialListBtn: document.getElementById('back-to-trial-list-btn'),
 };
 
 // Botones
@@ -159,6 +162,9 @@ function attachEventListeners() {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
     });
+    // NUEVO: Event listeners para los botones de volver
+    UIElements.backToLocationListBtn.addEventListener('click', () => advanceToNextLocation());
+    UIElements.backToTrialListBtn.addEventListener('click', () => startLocationTrials());
 }
 
 /**
@@ -193,6 +199,10 @@ function showGameView(viewName) {
     Object.keys(gameViews).forEach(key => {
         gameViews[key].classList.add('hidden');
     });
+    // Ocultar botones de volver por defecto
+    UIElements.backToLocationListBtn.classList.add('hidden');
+    UIElements.backToTrialListBtn.classList.add('hidden');
+
     if (gameViews[viewName]) {
         gameViews[viewName].classList.remove('hidden');
     }
@@ -306,8 +316,7 @@ function resumeGame() {
     UIElements.teamNameDisplay.textContent = gameState.teamName;
     UIElements.scoreDisplay.textContent = gameState.totalScore;
 
-    // ACTUALIZACIÓN: Ya no se inicia el totalTimerInterval aquí.
-    // El tiempo total se mostrará como la suma de los tiempos de las pruebas completadas.
+    // Ya no se inicia el totalTimerInterval aquí.
     updateTotalTimeDisplay(); // Llamar para mostrar el tiempo acumulado inicial
 
     renderCurrentState();
@@ -380,6 +389,9 @@ function renderCurrentState() {
     // Si hemos llegado a una ubicación pero aún no hemos empezado las pruebas (narrativa de ubicación)
     // Esto se ejecuta cuando se ha avanzado a una nueva ubicación, ya sea linealmente o seleccionándola de la lista.
     if (trialIndex === -1) {
+        // Ocultar botones de volver cuando se muestra una narrativa intermedia
+        UIElements.backToLocationListBtn.classList.add('hidden');
+        UIElements.backToTrialListBtn.classList.add('hidden');
         showNarrativeView(location.initial_narrative, location.image_url, location.audio_url, startLocationTrials);
         return;
     }
@@ -431,6 +443,8 @@ function advanceToNextLocation() {
         const uncompletedLocations = game.locations.filter(loc => !isLocationCompleted(loc.id));
 
         if (uncompletedLocations.length > 0) {
+            // Se asegura que no hay botón de volver en la lista inicial de ubicaciones
+            UIElements.backToLocationListBtn.classList.add('hidden');
             showListView('ubicaciones', uncompletedLocations, (selectedLoc) => {
                 // Al seleccionar una ubicación de la lista, actualizamos el índice
                 gameState.currentLocationIndex = game.locations.findIndex(l => l.id === selectedLoc.id);
@@ -455,6 +469,10 @@ function startLocationTrials() {
     const location = gameState.gameData.locations[gameState.currentLocationIndex];
 
     if (location.is_selectable_trials) {
+        // Ocultar el botón de volver a la lista de ubicaciones si venimos de ahí
+        UIElements.backToLocationListBtn.classList.add('hidden');
+        // Asegurarse que no haya botón de volver en la lista inicial de pruebas de la ubicación
+        UIElements.backToTrialListBtn.classList.add('hidden');
         // Mostrar lista de pruebas para que el jugador elija
         showListView('pruebas', location.trials, (trial) => {
             // Encontrar el índice de la prueba seleccionada y empezarla
@@ -533,6 +551,11 @@ function showLocationNavigationView(location) {
         fillOpacity: 0.3
     }).addTo(map);
 
+    // NUEVO: Mostrar botón de volver si la aventura es de ubicaciones seleccionables
+    if (gameState.gameData.adventure_type === 'selectable') {
+        UIElements.backToLocationListBtn.classList.remove('hidden');
+    }
+
     startLocationTracking(location);
 }
 
@@ -586,6 +609,13 @@ function renderTrial(trial) {
 
     renderTrialContent(trial);
     startTrialTimer(); // Inicia el temporizador de prueba
+
+    // NUEVO: Mostrar botón de volver si las pruebas de la ubicación son seleccionables
+    const currentLocation = getCurrentLocation();
+    if (currentLocation && currentLocation.is_selectable_trials) {
+        UIElements.backToTrialListBtn.classList.remove('hidden');
+    }
+
     showGameView('trial');
 }
 
@@ -724,6 +754,10 @@ function processAnswer(isCorrect) {
     const hintsUsed = getHintsUsedForTrial(trial.id);
 
     if (isCorrect) {
+        // Ocultar botones de volver si la prueba se ha resuelto
+        UIElements.backToTrialListBtn.classList.add('hidden');
+        UIElements.backToLocationListBtn.classList.add('hidden');
+
         // Calcular puntos
         const baseScore = gameState.gameData.initial_score_per_trial;
         const timePenalty = timeTaken; // 1 punto por segundo
@@ -809,10 +843,6 @@ function requestHint() {
 // =================================================================
 // FUNCIONES DE TEMPORIZADOR
 // =================================================================
-
-// ACTUALIZACIÓN: La función startTotalTimer y stopTotalTimer ya no son necesarias
-// para un temporizador continuo, solo para el cálculo final.
-// La función `updateTotalTimeDisplay` se encargará de mostrar el tiempo acumulado.
 
 /**
  * Actualiza la visualización del tiempo total acumulado de las pruebas.
@@ -912,9 +942,11 @@ function startLocationTracking(target, isTrialValidation = false) {
             } else {
                 // Lógica para navegar a una ubicación
                 UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
-                if (distance <= target.tolerance_meters) { // Corregido: 'tolerance_meters' en lugar de 'tolerance.meters'
+                if (distance <= target.tolerance_meters) {
                     showAlert('¡Has llegado a la ubicación!', 'success');
                     stopLocationTracking();
+                    // Ocultar el botón de volver si se ha llegado a la ubicación
+                    UIElements.backToLocationListBtn.classList.add('hidden');
                     renderCurrentState(); // La ubicación se alcanzó, renderizar el siguiente estado (narrativa de ubicación)
                 }
             }
@@ -1000,11 +1032,10 @@ function stopQrScanner() {
 // =================================================================
 
 async function endGame() {
-    // La función stopTotalTimer() ya no es relevante si no hay un timer continuo
     stopLocationTracking();
 
     // Calcular el tiempo total a partir del progressLog (esto ya estaba correcto)
-    const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
+    const finalTimeSeconds = gameState.progressLog.reduce((sum, entry => sum + entry.timeTaken, 0);
     gameState.totalTimeSeconds = finalTimeSeconds;
     gameState.isCompleted = true; // Asegurarse de que el estado está marcado como completado
 
