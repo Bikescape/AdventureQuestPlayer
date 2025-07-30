@@ -28,21 +28,19 @@ const UIElements = {
     totalTimerDisplay: document.getElementById('total-timer-display'),
     gameListContainer: document.getElementById('game-list-container'),
     gameDetailTitle: document.getElementById('game-detail-title'),
-    // Se han eliminado las referencias a gameDetailNarrative y gameDetailDescription
-    // ya que no están en la pantalla game-detail-screen según el nuevo flujo.
     gameDetailMechanics: document.getElementById('game-detail-mechanics'),
     teamNameInput: document.getElementById('team-name-input'),
     narrativeImage: document.getElementById('narrative-image'),
     narrativeAudio: document.getElementById('narrative-audio'),
-    narrativeText: document.getElementById('narrative-text'),
+    narrativeText: document.getElementById('narrative-text'), // Se usará innerHTML
     navLocationName: document.getElementById('nav-location-name'),
-    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
+    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'), // Se usará innerHTML
     distanceInfo: document.getElementById('distance-info'),
     listTitle: document.getElementById('list-title'),
     listItemsContainer: document.getElementById('list-items-container'),
     trialImage: document.getElementById('trial-image'),
     trialAudio: document.getElementById('trial-audio'),
-    trialNarrative: document.getElementById('trial-narrative'),
+    trialNarrative: document.getElementById('trial-narrative'), // Se usará innerHTML
     trialTimerDisplay: document.getElementById('trial-timer-display'),
     trialContent: document.getElementById('trial-content'),
     hintBtn: document.getElementById('hint-btn'),
@@ -133,6 +131,7 @@ async function initWelcomeScreen() {
                 const card = document.createElement('div');
                 card.className = 'game-card';
                 // La descripción se muestra en la tarjeta de la lista de juegos
+                // CAMBIO AQUÍ: Usar innerHTML para la descripción
                 card.innerHTML = `<h2>${game.title}</h2><p>${game.description}</p>`;
                 card.onclick = () => showGameDetails(game);
                 UIElements.gameListContainer.appendChild(card);
@@ -212,9 +211,8 @@ function showGameView(viewName) {
 function showGameDetails(game) {
     selectedGame = game;
     UIElements.gameDetailTitle.textContent = game.title;
-    // Ahora solo se muestra la mecánica en esta pantalla de detalles
-    UIElements.gameDetailMechanics.textContent = game.mechanics;
-    // La descripción y la narrativa inicial se manejan en otras pantallas/pasos
+    // CAMBIO AQUÍ: Usar innerHTML para la mecánica
+    UIElements.gameDetailMechanics.innerHTML = game.mechanics;
     UIElements.teamNameInput.value = '';
     showScreen('gameDetail');
 }
@@ -497,7 +495,8 @@ function advanceToNextTrial() {
  * @param {function} onContinue - Callback a ejecutar al pulsar continuar.
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
-    UIElements.narrativeText.textContent = text || "Un momento de calma antes de la siguiente prueba...";
+    // CAMBIO AQUÍ: Usar innerHTML para el texto de la narrativa
+    UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
 
     UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
     UIElements.narrativeImage.src = imageUrl || '';
@@ -520,7 +519,8 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
  */
 function showLocationNavigationView(location) {
     UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
-    UIElements.navPreArrivalNarrative.textContent = location.pre_arrival_narrative;
+    // CAMBIO AQUÍ: Usar innerHTML para la narrativa pre-llegada
+    UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
     showGameView('locationNav');
     initMap('location-map');
 
@@ -557,7 +557,6 @@ function showListView(type, items, onSelect) {
         if (type === 'ubicaciones' && isLocationCompleted(item.id)) return;
 
 
-        // CAMBIO AQUI: Crear un botón en lugar de un div
         const itemButton = document.createElement('button');
         itemButton.className = 'list-item-button action-button'; // Añadimos una clase para estilos y la clase action-button
         // Mostrar el título de la prueba o una parte de la narrativa si no tiene título
@@ -575,7 +574,8 @@ function showListView(type, items, onSelect) {
  */
 function renderTrial(trial) {
     console.log("Rendering trial:", trial);
-    UIElements.trialNarrative.textContent = trial.narrative;
+    // CAMBIO AQUÍ: Usar innerHTML para la narrativa de la prueba
+    UIElements.trialNarrative.innerHTML = trial.narrative;
 
     UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
     UIElements.trialImage.src = trial.image_url || '';
@@ -632,7 +632,8 @@ function renderTrialContent(trial) {
  */
 function renderTextTrial(trial) {
     const question = document.createElement('p');
-    question.textContent = trial.question;
+    // CAMBIO AQUÍ: Usar innerHTML para la pregunta
+    question.innerHTML = trial.question;
     question.className = 'trial-question';
     UIElements.trialContent.appendChild(question);
 
@@ -652,7 +653,8 @@ function renderTextTrial(trial) {
             trial.options.forEach(option => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'text-option';
-                optionDiv.textContent = option;
+                // CAMBIO AQUÍ: Usar innerHTML para las opciones
+                optionDiv.innerHTML = option;
                 optionDiv.dataset.value = option;
                 optionDiv.onclick = () => {
                     // Deseleccionar otros y seleccionar este
@@ -793,7 +795,8 @@ function requestHint() {
         return;
     }
 
-    UIElements.hintText.textContent = hintText;
+    // CAMBIO AQUÍ: Usar innerHTML para el texto de la pista
+    UIElements.hintText.innerHTML = hintText;
     UIElements.hintModal.classList.remove('hidden');
 
     // Aplicar penalización y actualizar estado
@@ -915,7 +918,7 @@ function startLocationTracking(target, isTrialValidation = false) {
             } else {
                 // Lógica para navegar a una ubicación
                 UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
-                if (distance <= target.tolerance.meters) { // Corregido: 'tolerance_meters' en lugar de 'tolerance.meters'
+                if (distance <= target.tolerance_meters) { // Corregido: 'tolerance_meters' en lugar de 'tolerance.meters'
                     showAlert('¡Has llegado a la ubicación!', 'success');
                     stopLocationTracking();
                     renderCurrentState(); // La ubicación se alcanzó, renderizar el siguiente estado (narrativa de ubicación)
