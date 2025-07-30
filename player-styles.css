@@ -23,6 +23,7 @@
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
     --border-radius: 8px;
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --app-max-width: 600px; /* Ancho máximo para el contenido de la aplicación */
 }
 
 body {
@@ -100,8 +101,9 @@ main#app-container {
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
     margin-bottom: 20px;
-    width: 100%;
-    max-width: 500px;
+    width: 100%; /* Asegura que la caja de contenido ocupe todo el ancho disponible */
+    max-width: var(--app-max-width); /* Limita el ancho máximo para pantallas grandes */
+    box-sizing: border-box; /* Incluye padding en el cálculo del ancho */
 }
 
 .content-box h2, .content-box h3 {
@@ -190,21 +192,37 @@ input[type="text"]:focus {
 /* ======== VISTAS DE JUEGO ======== */
 .game-view {
     width: 100%;
-    max-width: 500px;
+    max-width: var(--app-max-width); /* Se asegura que la vista respete el ancho máximo de la app */
+    margin: 0 auto; /* Centra la vista */
+    padding: 15px; /* Añade un padding general a las vistas */
+    box-sizing: border-box;
 }
 
 /* Vista de Narrativa */
 .narrative-box { text-align: center; }
-#narrative-image {
-    max-width: 100%;
+.narrative-image { /* Aplicado a #narrative-image y #nav-location-image */
+    max-width: 100%; /* La imagen no excederá el ancho de su contenedor padre */
+    height: auto;    /* Mantiene la relación de aspecto */
+    display: block;  /* Evita espacios extra debajo de la imagen */
+    margin: 10px auto; /* Centra la imagen y añade margen vertical */
     border-radius: var(--border-radius);
-    margin-bottom: 15px;
+    box-shadow: var(--shadow);
 }
 
 /* Vista de Navegación (Mapa) */
+#location-navigation-view {
+    display: flex;
+    flex-direction: column; /* Apila los elementos verticalmente */
+    align-items: center; /* Centra los elementos horizontalmente */
+    width: 100%; /* Ocupa el 100% del ancho de su padre (.game-play-screen) */
+    max-width: var(--app-max-width); /* Limita el ancho máximo */
+    margin: 0 auto;
+    padding: 0; /* Elimina padding duplicado si el .game-view ya lo tiene */
+}
+
 .map-container {
-    height: 40vh;
-    width: 100%;
+    height: 40vh; /* Altura del mapa, 40% del viewport height */
+    width: 100%; /* El mapa ocupa todo el ancho disponible de su contenedor */
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
     border: 3px solid var(--surface);
@@ -253,7 +271,7 @@ input[type="text"]:focus {
     border-radius: 20px;
     font-weight: bold;
 }
-#trial-image {
+#trial-image { /* Usa la misma clase .narrative-image para estilos similares */
     max-width: 100%;
     border-radius: var(--border-radius);
     margin-bottom: 15px;
