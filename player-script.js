@@ -3,8 +3,7 @@
 // Estado global del juego
 let gameState = {};
 
-// Elementos del DOM (Pantallas) - Estos pueden declararse aquí, son elementos de alto nivel
-// Los IDs como 'loading-screen', 'welcome-screen', etc., son seguros porque son elementos raíz o muy tempranos.
+// Elementos del DOM (Pantallas)
 const screens = {
     loading: document.getElementById('loading-screen'),
     welcome: document.getElementById('welcome-screen'),
@@ -13,7 +12,7 @@ const screens = {
     gameOver: document.getElementById('game-over-screen'),
 };
 
-// Elementos del DOM (Vistas dentro de GamePlay) - Estos también son de alto nivel
+// Elementos del DOM (Vistas dentro de GamePlay)
 const gameViews = {
     narrative: document.getElementById('narrative-view'),
     locationNav: document.getElementById('location-navigation-view'),
@@ -21,13 +20,50 @@ const gameViews = {
     trial: document.getElementById('trial-view'),
 };
 
-// Elementos del DOM (Contenido dinámico) - Declara como 'let', asigna dentro de DOMContentLoaded
-// Esto es CRUCIAL para evitar errores 'Cannot read properties of null'.
-// Los elementos DOM serán buscados SOLO cuando el DOM esté completamente cargado.
-let UIElements = {};
+// Elementos del DOM (Contenido dinámico)
+const UIElements = {
+    gameHeader: document.getElementById('game-header'),
+    teamNameDisplay: document.getElementById('team-name-display'),
+    scoreDisplay: document.getElementById('score-display'),
+    totalTimerDisplay: document.getElementById('total-timer-display'), // Este ahora mostrará el tiempo acumulado de las pruebas
+    gameListContainer: document.getElementById('game-list-container'),
+    gameDetailTitle: document.getElementById('game-detail-title'),
+    gameDetailMechanics: document.getElementById('game-detail-mechanics'),
+    teamNameInput: document.getElementById('team-name-input'),
+    narrativeImage: document.getElementById('narrative-image'),
+    narrativeAudio: document.getElementById('narrative-audio'),
+    narrativeText: document.getElementById('narrative-text'),
+    navLocationName: document.getElementById('nav-location-name'),
+    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
+    distanceInfo: document.getElementById('distance-info'),
+    listTitle: document.getElementById('list-title'),
+    listItemsContainer: document.getElementById('list-items-container'),
+    trialImage: document.getElementById('trial-image'),
+    trialAudio: document.getElementById('trial-audio'),
+    trialNarrative: document.getElementById('trial-narrative'),
+    trialTimerDisplay: document.getElementById('trial-timer-display'),
+    trialContent: document.getElementById('trial-content'),
+    hintBtn: document.getElementById('hint-btn'),
+    hintCostDisplay: document.getElementById('hint-cost-display'),
+    finalTeamName: document.getElementById('final-team-name'),
+    finalScore: document.getElementById('final-score'),
+    finalTime: document.getElementById('final-time'),
+    finalRankingContainer: document.getElementById('final-ranking-container'),
+    qrScannerModal: document.getElementById('qr-scanner-modal'),
+    hintModal: document.getElementById('hint-modal'),
+    hintText: document.getElementById('hint-text'),
+};
 
-// Botones - Declara como 'let', asigna dentro de DOMContentLoaded
-let buttons = {};
+// Botones
+const buttons = {
+    startGame: document.getElementById('start-game-btn'),
+    backToWelcome: document.getElementById('back-to-welcome-btn'),
+    narrativeContinue: document.getElementById('narrative-continue-btn'),
+    validateAnswer: document.getElementById('validate-answer-btn'),
+    closeQrScanner: document.getElementById('close-qr-scanner-btn'),
+    closeHint: document.getElementById('close-hint-btn'),
+    playAgain: document.getElementById('play-again-btn'),
+};
 
 // Variables de estado de la lógica del juego
 let selectedGame = null;
@@ -43,56 +79,6 @@ let watchPositionId;
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // AHORA INICIALIZAMOS UIElements y buttons AQUÍ, cuando el DOM está listo
-    UIElements = {
-        gameHeader: document.getElementById('game-header'),
-        teamNameDisplay: document.getElementById('team-name-display'),
-        scoreDisplay: document.getElementById('score-display'),
-        totalTimerDisplay: document.getElementById('total-timer-display'),
-        gameListContainer: document.getElementById('game-list-container'),
-        gameDetailTitle: document.getElementById('game-detail-title'),
-        // *** IMPORTANTE: Asegúrate de que estos IDs existen en tu player.html ***
-        // gameDetailNarrative: document.getElementById('game-detail-initial-narrative'), // ELIMINADO: No existe en el HTML proporcionado
-        // gameDetailDescription: document.getElementById('game-detail-description'),     // ELIMINADO: No existe en el HTML proporcionado
-        gameDetailMechanics: document.getElementById('game-detail-mechanics'), // Este sí existe
-        teamNameInput: document.getElementById('team-name-input'),
-        narrativeImage: document.getElementById('narrative-image'),
-        narrativeAudio: document.getElementById('narrative-audio'),
-        narrativeText: document.getElementById('narrative-text'),
-        navLocationName: document.getElementById('nav-location-name'),
-        navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
-        distanceInfo: document.getElementById('distance-info'),
-        listTitle: document.getElementById('list-title'),
-        listItemsContainer: document.getElementById('list-items-container'),
-        trialImage: document.getElementById('trial-image'),
-        trialAudio: document.getElementById('trial-audio'),
-        trialNarrative: document.getElementById('trial-narrative'),
-        trialTimerDisplay: document.getElementById('trial-timer-display'),
-        trialContent: document.getElementById('trial-content'),
-        hintBtn: document.getElementById('hint-btn'),
-        hintCostDisplay: document.getElementById('hint-cost-display'),
-        finalTeamName: document.getElementById('final-team-name'),
-        finalScore: document.getElementById('final-score'),
-        finalTime: document.getElementById('final-time'),
-        finalRankingContainer: document.getElementById('final-ranking-container'),
-        qrScannerModal: document.getElementById('qr-scanner-modal'),
-        hintModal: document.getElementById('hint-modal'),
-        hintText: document.getElementById('hint-text'),
-        backToLocationListBtn: document.getElementById('back-to-location-list-btn'),
-        backToTrialListBtn: document.getElementById('back-to-trial-list-btn'),
-    };
-
-    buttons = {
-        startGame: document.getElementById('start-game-btn'),
-        backToWelcome: document.getElementById('back-to-welcome-btn'),
-        narrativeContinue: document.getElementById('narrative-continue-btn'),
-        validateAnswer: document.getElementById('validate-answer-btn'),
-        closeQrScanner: document.getElementById('close-qr-scanner-btn'),
-        closeHint: document.getElementById('close-hint-btn'),
-        playAgain: document.getElementById('play-again-btn'),
-    };
-
-
     // Registro del Service Worker para PWA
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js')
@@ -126,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function initWelcomeScreen() {
     showScreen('loading');
-    // UIElements.gameHeader ya estará inicializado aquí porque está dentro de DOMContentLoaded
     UIElements.gameHeader.classList.add('hidden');
 
     try {
@@ -174,9 +159,6 @@ function attachEventListeners() {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
     });
-    // NUEVO: Event listeners para los botones de volver
-    UIElements.backToLocationListBtn.addEventListener('click', () => advanceToNextLocation());
-    UIElements.backToTrialListBtn.addEventListener('click', () => startLocationTrials());
 }
 
 /**
@@ -211,10 +193,6 @@ function showGameView(viewName) {
     Object.keys(gameViews).forEach(key => {
         gameViews[key].classList.add('hidden');
     });
-    // Ocultar botones de volver por defecto
-    UIElements.backToLocationListBtn.classList.add('hidden');
-    UIElements.backToTrialListBtn.classList.add('hidden');
-
     if (gameViews[viewName]) {
         gameViews[viewName].classList.remove('hidden');
     }
@@ -232,8 +210,7 @@ function showGameView(viewName) {
 function showGameDetails(game) {
     selectedGame = game;
     UIElements.gameDetailTitle.textContent = game.title;
-    // La narrativa inicial del juego se mostrará en showNarrativeView
-    UIElements.gameDetailMechanics.innerHTML = game.mechanics; // Usamos mechanics para la descripción visible en detalle
+    UIElements.gameDetailMechanics.innerHTML = game.mechanics;
     UIElements.teamNameInput.value = '';
     showScreen('gameDetail');
 }
@@ -329,7 +306,8 @@ function resumeGame() {
     UIElements.teamNameDisplay.textContent = gameState.teamName;
     UIElements.scoreDisplay.textContent = gameState.totalScore;
 
-    // Ya no se inicia el totalTimerInterval aquí.
+    // ACTUALIZACIÓN: Ya no se inicia el totalTimerInterval aquí.
+    // El tiempo total se mostrará como la suma de los tiempos de las pruebas completadas.
     updateTotalTimeDisplay(); // Llamar para mostrar el tiempo acumulado inicial
 
     renderCurrentState();
@@ -402,9 +380,6 @@ function renderCurrentState() {
     // Si hemos llegado a una ubicación pero aún no hemos empezado las pruebas (narrativa de ubicación)
     // Esto se ejecuta cuando se ha avanzado a una nueva ubicación, ya sea linealmente o seleccionándola de la lista.
     if (trialIndex === -1) {
-        // Ocultar botones de volver cuando se muestra una narrativa intermedia
-        UIElements.backToLocationListBtn.classList.add('hidden');
-        UIElements.backToTrialListBtn.classList.add('hidden');
         showNarrativeView(location.initial_narrative, location.image_url, location.audio_url, startLocationTrials);
         return;
     }
@@ -456,8 +431,6 @@ function advanceToNextLocation() {
         const uncompletedLocations = game.locations.filter(loc => !isLocationCompleted(loc.id));
 
         if (uncompletedLocations.length > 0) {
-            // Se asegura que no hay botón de volver en la lista inicial de ubicaciones
-            UIElements.backToLocationListBtn.classList.add('hidden');
             showListView('ubicaciones', uncompletedLocations, (selectedLoc) => {
                 // Al seleccionar una ubicación de la lista, actualizamos el índice
                 gameState.currentLocationIndex = game.locations.findIndex(l => l.id === selectedLoc.id);
@@ -482,10 +455,6 @@ function startLocationTrials() {
     const location = gameState.gameData.locations[gameState.currentLocationIndex];
 
     if (location.is_selectable_trials) {
-        // Ocultar el botón de volver a la lista de ubicaciones si venimos de ahí
-        UIElements.backToLocationListBtn.classList.add('hidden');
-        // Asegurarse que no haya botón de volver en la lista inicial de pruebas de la ubicación
-        UIElements.backToTrialListBtn.classList.add('hidden');
         // Mostrar lista de pruebas para que el jugador elija
         showListView('pruebas', location.trials, (trial) => {
             // Encontrar el índice de la prueba seleccionada y empezarla
@@ -528,7 +497,6 @@ function advanceToNextTrial() {
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
 
-    // Estas son las líneas que causaban el error si narrativeImage era null
     UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
     UIElements.narrativeImage.src = imageUrl || '';
 
@@ -564,11 +532,6 @@ function showLocationNavigationView(location) {
         fillColor: '#ffc107',
         fillOpacity: 0.3
     }).addTo(map);
-
-    // NUEVO: Mostrar botón de volver si la aventura es de ubicaciones seleccionables
-    if (gameState.gameData.adventure_type === 'selectable') {
-        UIElements.backToLocationListBtn.classList.remove('hidden');
-    }
 
     startLocationTracking(location);
 }
@@ -623,13 +586,6 @@ function renderTrial(trial) {
 
     renderTrialContent(trial);
     startTrialTimer(); // Inicia el temporizador de prueba
-
-    // NUEVO: Mostrar botón de volver si las pruebas de la ubicación son seleccionables
-    const currentLocation = getCurrentLocation();
-    if (currentLocation && currentLocation.is_selectable_trials) {
-        UIElements.backToTrialListBtn.classList.remove('hidden');
-    }
-
     showGameView('trial');
 }
 
@@ -768,10 +724,6 @@ function processAnswer(isCorrect) {
     const hintsUsed = getHintsUsedForTrial(trial.id);
 
     if (isCorrect) {
-        // Ocultar botones de volver si la prueba se ha resuelto
-        UIElements.backToTrialListBtn.classList.add('hidden');
-        UIElements.backToLocationListBtn.classList.add('hidden');
-
         // Calcular puntos
         const baseScore = gameState.gameData.initial_score_per_trial;
         const timePenalty = timeTaken; // 1 punto por segundo
@@ -857,6 +809,10 @@ function requestHint() {
 // =================================================================
 // FUNCIONES DE TEMPORIZADOR
 // =================================================================
+
+// ACTUALIZACIÓN: La función startTotalTimer y stopTotalTimer ya no son necesarias
+// para un temporizador continuo, solo para el cálculo final.
+// La función `updateTotalTimeDisplay` se encargará de mostrar el tiempo acumulado.
 
 /**
  * Actualiza la visualización del tiempo total acumulado de las pruebas.
@@ -956,11 +912,9 @@ function startLocationTracking(target, isTrialValidation = false) {
             } else {
                 // Lógica para navegar a una ubicación
                 UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
-                if (distance <= target.tolerance_meters) {
+                if (distance <= target.tolerance_meters) { // Corregido: 'tolerance_meters' en lugar de 'tolerance.meters'
                     showAlert('¡Has llegado a la ubicación!', 'success');
                     stopLocationTracking();
-                    // Ocultar el botón de volver si se ha llegado a la ubicación
-                    UIElements.backToLocationListBtn.classList.add('hidden');
                     renderCurrentState(); // La ubicación se alcanzó, renderizar el siguiente estado (narrativa de ubicación)
                 }
             }
@@ -1046,9 +1000,10 @@ function stopQrScanner() {
 // =================================================================
 
 async function endGame() {
+    // La función stopTotalTimer() ya no es relevante si no hay un timer continuo
     stopLocationTracking();
 
-    // Calcular el tiempo total a partir del progressLog
+    // Calcular el tiempo total a partir del progressLog (esto ya estaba correcto)
     const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
     gameState.totalTimeSeconds = finalTimeSeconds;
     gameState.isCompleted = true; // Asegurarse de que el estado está marcado como completado
