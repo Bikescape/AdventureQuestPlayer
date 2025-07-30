@@ -17,7 +17,7 @@ const gameViews = {
     narrative: document.getElementById('narrative-view'),
     locationNav: document.getElementById('location-navigation-view'),
     list: document.getElementById('list-view'),
-    trial: document: document.getElementById('trial-view'),
+    trial: document.getElementById('trial-view'),
 };
 
 // Elementos del DOM (Contenido dinámico)
