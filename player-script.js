@@ -35,8 +35,8 @@ const UIElements = {
     narrativeText: document.getElementById('narrative-text'),
     navLocationName: document.getElementById('nav-location-name'),
     navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
-    navLocationImage: document.getElementById('nav-location-image'), // NEW
-    navLocationAudio: document.getElementById('nav-location-audio'), // NEW
+    navLocationImage: document.getElementById('nav-location-image'),
+    navLocationAudio: document.getElementById('nav-location-audio'),
     distanceInfo: document.getElementById('distance-info'),
     listTitle: document.getElementById('list-title'),
     listItemsContainer: document.getElementById('list-items-container'),
@@ -54,6 +54,9 @@ const UIElements = {
     qrScannerModal: document.getElementById('qr-scanner-modal'),
     hintModal: document.getElementById('hint-modal'),
     hintText: document.getElementById('hint-text'),
+    // NUEVOS BOTONES DE VOLVER AL LISTADO
+    backToListFromNavBtn: document.getElementById('back-to-list-from-nav-btn'),
+    backToListFromTrialBtn: document.getElementById('back-to-list-from-trial-btn'),
 };
 
 // Botones
@@ -160,6 +163,15 @@ function attachEventListeners() {
     buttons.playAgain.addEventListener('click', () => {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
+    });
+    // NUEVOS LISTENERS PARA LOS BOTONES DE VOLVER AL LISTADO
+    UIElements.backToListFromNavBtn.addEventListener('click', () => {
+        stopLocationTracking(); // Detener seguimiento GPS
+        advanceToNextLocation(); // Llama a la lógica para mostrar el listado de ubicaciones
+    });
+    UIElements.backToListFromTrialBtn.addEventListener('click', () => {
+        stopTrialTimer(); // Detener el temporizador de la prueba
+        startLocationTrials(); // Llama a la lógica para mostrar el listado de pruebas de la ubicación
     });
 }
 
@@ -551,6 +563,13 @@ function showLocationNavigationView(location) {
     }).addTo(map);
 
     startLocationTracking(location);
+
+    // Mostrar el botón "Volver al Listado" si el juego es de ubicaciones seleccionables
+    if (gameState.gameData.adventure_type === 'selectable') {
+        UIElements.backToListFromNavBtn.classList.remove('hidden');
+    } else {
+        UIElements.backToListFromNavBtn.classList.add('hidden');
+    }
 }
 
 /**
@@ -581,6 +600,9 @@ function showListView(type, items, onSelect) {
     });
 
     showGameView('list');
+    // Asegurarse de ocultar los botones de volver al listado al mostrar la vista de lista
+    UIElements.backToListFromNavBtn.classList.add('hidden');
+    UIElements.backToListFromTrialBtn.classList.add('hidden');
 }
 
 /**
@@ -604,6 +626,14 @@ function renderTrial(trial) {
     renderTrialContent(trial);
     startTrialTimer(); // Inicia el temporizador de prueba
     showGameView('trial');
+
+    // Mostrar el botón "Volver al Listado" si las pruebas de la ubicación son seleccionables
+    const currentLocation = getCurrentLocation();
+    if (currentLocation && currentLocation.is_selectable_trials) {
+        UIElements.backToListFromTrialBtn.classList.remove('hidden');
+    } else {
+        UIElements.backToListFromTrialBtn.classList.add('hidden');
+    }
 }
 
 /**
