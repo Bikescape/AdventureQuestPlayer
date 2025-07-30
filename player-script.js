@@ -28,8 +28,8 @@ const UIElements = {
     totalTimerDisplay: document.getElementById('total-timer-display'),
     gameListContainer: document.getElementById('game-list-container'),
     gameDetailTitle: document.getElementById('game-detail-title'),
-    gameDetailNarrative: document.getElementById('game-detail-initial-narrative'),
-    gameDetailDescription: document.getElementById('game-detail-description'),
+    // Se han eliminado las referencias a gameDetailNarrative y gameDetailDescription
+    // ya que no están en la pantalla game-detail-screen según el nuevo flujo.
     gameDetailMechanics: document.getElementById('game-detail-mechanics'),
     teamNameInput: document.getElementById('team-name-input'),
     narrativeImage: document.getElementById('narrative-image'),
@@ -71,7 +71,7 @@ const buttons = {
 let selectedGame = null;
 let html5QrCode = null;
 let map, playerMarker, targetMarker, targetCircle;
-let totalTimerInterval, trialTimerInterval; // totalTimerInterval ya no se usa para el tiempo global visible
+let totalTimerInterval, trialTimerInterval;
 let lastTrialStartTime;
 let watchPositionId;
 
@@ -132,6 +132,7 @@ async function initWelcomeScreen() {
             data.forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'game-card';
+                // La descripción se muestra en la tarjeta de la lista de juegos
                 card.innerHTML = `<h2>${game.title}</h2><p>${game.description}</p>`;
                 card.onclick = () => showGameDetails(game);
                 UIElements.gameListContainer.appendChild(card);
@@ -160,8 +161,6 @@ function attachEventListeners() {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
     });
-    // [CORRECCIÓN 1]: Se ha eliminado la línea que causaba ReferenceError.
-    // El listener para narrativeContinue se setea dinámicamente en showNarrativeView.
 }
 
 /**
@@ -213,9 +212,9 @@ function showGameView(viewName) {
 function showGameDetails(game) {
     selectedGame = game;
     UIElements.gameDetailTitle.textContent = game.title;
-    UIElements.gameDetailNarrative.textContent = game.initial_narrative;
-    UIElements.gameDetailDescription.textContent = game.description;
+    // Ahora solo se muestra la mecánica en esta pantalla de detalles
     UIElements.gameDetailMechanics.textContent = game.mechanics;
+    // La descripción y la narrativa inicial se manejan en otras pantallas/pasos
     UIElements.teamNameInput.value = '';
     showScreen('gameDetail');
 }
@@ -244,7 +243,7 @@ async function startGame() {
                 last_activity: startTime,
                 total_score: 0,
                 progress_log: [],
-                hints_used_per_trial: [], // Asegúrate de que esta columna exista en Supabase como jsonb
+                hints_used_per_trial: [],
                 hints_used_global: 0,
                 is_completed: false
             })
@@ -280,11 +279,11 @@ async function startGame() {
             teamName: teamData.name,
             gameId: selectedGame.id,
             gameData: gameStructure,
-            currentLocationIndex: -1, // Empezamos antes de la primera ubicación
+            currentLocationIndex: -1, // Empezamos antes de la primera ubicación, para mostrar narrativa inicial del juego
             currentTrialIndex: -1,
             totalScore: 0,
             startTime: startTime.toISOString(),
-            progressLog: [], // Almacena { trialId, completedAt, timeTaken, score, hintsUsed }
+            progressLog: [],
             globalHintsUsed: 0,
             isCompleted: false,
         };
@@ -295,7 +294,6 @@ async function startGame() {
         resumeGame();
 
     } catch (error) {
-        // CAMBIO IMPORTANTE: Muestra el mensaje de error específico de Supabase
         console.error("Error starting game:", error.message || error);
         showAlert(`Error al iniciar la partida: ${error.message}`, 'error');
         showScreen('gameDetail');
@@ -312,9 +310,8 @@ function resumeGame() {
     UIElements.teamNameDisplay.textContent = gameState.teamName;
     UIElements.scoreDisplay.textContent = gameState.totalScore;
 
-    // El temporizador total solo mostrará la suma de tiempos de prueba,
-    // no correrá continuamente. UIElements.totalTimerDisplay se actualizará al final
-    // y para mostrar el tiempo actual de la prueba, ya se usa trialTimerDisplay.
+    // El temporizador total del juego sí debe ser visible en la cabecera
+    startTotalTimer();
 
     renderCurrentState();
 }
@@ -335,7 +332,7 @@ async function syncStateWithSupabase() {
         progress_log: gameState.progressLog,
         hints_used_per_trial: gameState.hints_used_per_trial || [],
         hints_used_global: gameState.globalHintsUsed,
-        total_time_seconds: totalTimeTrials, // Tiempo total basado en la suma de pruebas
+        total_time_seconds: totalTimeTrials, // Tiempo total basado en la suma de pruebas para el ranking
         is_completed: gameState.isCompleted,
         last_activity: new Date().toISOString()
     };
@@ -374,6 +371,7 @@ function renderCurrentState() {
 
     // Si aún no hemos empezado la primera ubicación (narrativa inicial del juego)
     if (locIndex === -1) {
+        // Mostrar la narrativa inicial del juego y luego avanzar a la primera ubicación/selección de ubicación
         showNarrativeView(game.initial_narrative, null, null, advanceToNextLocation);
         return;
     }
@@ -394,10 +392,10 @@ function renderCurrentState() {
     // Esto es especialmente importante para "pruebas seleccionables"
     if (isTrialCompleted(trial.id)) {
         if (location.is_selectable_trials) {
-            // Si es seleccionable, y esta prueba ya está completada, volvemos a la lista
+            // Si es seleccionable, y esta prueba ya está completada, volvemos a la lista de pruebas de la ubicación
             startLocationTrials();
         } else {
-            // Si es lineal, simplemente avanzamos a la siguiente
+            // Si es lineal, simplemente avanzamos a la siguiente prueba lineal
             advanceToNextTrial();
         }
         return;
@@ -427,21 +425,20 @@ function advanceToNextLocation() {
             return;
         }
         const location = game.locations[gameState.currentLocationIndex];
-        showLocationNavigationView(location); // Mostrar mapa para navegar a la nueva ubicación
+        // Mostrar el mapa para navegar a la nueva ubicación
+        showLocationNavigationView(location);
     } else { // 'selectable'
         // Si es seleccionable, no incrementamos el currentLocationIndex aquí,
         // sino que el usuario lo elegirá de una lista.
-        // Si es la primera vez (locIndex -1) se mostrará la narrativa inicial y luego se llamará a esta misma función
-        // donde se le mostrará la lista de ubicaciones.
-        // Si ya hay una ubicación en curso, esta función es llamada después de su narrativa para mostrar la lista de pruebas de esa ubicación.
         const uncompletedLocations = game.locations.filter(loc => !isLocationCompleted(loc.id));
-        
+
         if (uncompletedLocations.length > 0) {
             showListView('ubicaciones', uncompletedLocations, (selectedLoc) => {
                 // Al seleccionar una ubicación de la lista, actualizamos el índice
                 gameState.currentLocationIndex = game.locations.findIndex(l => l.id === selectedLoc.id);
                 gameState.currentTrialIndex = -1; // Reiniciar para la nueva ubicación seleccionada
-                renderCurrentState(); // Esto llevará a la narrativa de la ubicación seleccionada
+                // Una vez seleccionada la ubicación, ir a la navegación GPS para alcanzarla
+                showLocationNavigationView(selectedLoc);
             });
         } else {
             // Todas las ubicaciones completadas en modo seleccionable
@@ -668,7 +665,7 @@ function renderTextTrial(trial) {
 
         case 'ordering':
             // Lógica de ordenación (Drag and Drop simple)
-            alert('Prueba de ordenación pendiente de implementación.');
+            showAlert('Prueba de ordenación pendiente de implementación.');
             break;
     }
 }
@@ -815,8 +812,17 @@ function requestHint() {
 // FUNCIONES DE TEMPORIZADOR
 // =================================================================
 
-// Ya no hay un temporizador total visible que corra continuamente.
-// El tiempo total se calcula al final sumando los tiempos de cada prueba.
+function startTotalTimer() {
+    if (totalTimerInterval) clearInterval(totalTimerInterval);
+    const startTime = new Date(gameState.startTime);
+    totalTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((new Date() - startTime) / 1000);
+        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const seconds = String(elapsed % 60).padStart(2, '0');
+        UIElements.totalTimerDisplay.textContent = `${minutes}:${seconds}`;
+    }, 1000);
+}
+
 function stopTotalTimer() {
     clearInterval(totalTimerInterval);
 }
