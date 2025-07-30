@@ -35,6 +35,8 @@ const UIElements = {
     narrativeText: document.getElementById('narrative-text'),
     navLocationName: document.getElementById('nav-location-name'),
     navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
+    navLocationImage: document.getElementById('nav-location-image'), // NEW
+    navLocationAudio: document.getElementById('nav-location-audio'), // NEW
     distanceInfo: document.getElementById('distance-info'),
     listTitle: document.getElementById('list-title'),
     listItemsContainer: document.getElementById('list-items-container'),
@@ -519,6 +521,21 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
 function showLocationNavigationView(location) {
     UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
     UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
+
+    // Set and display image
+    UIElements.navLocationImage.classList.toggle('hidden', !location.image_url);
+    UIElements.navLocationImage.src = location.image_url || '';
+
+    // Set and play audio
+    UIElements.navLocationAudio.src = location.audio_url || '';
+    if (location.audio_url) {
+        UIElements.navLocationAudio.loop = true; // Loop the audio
+        UIElements.navLocationAudio.play().catch(e => console.log("Location audio play prevented by browser:", e));
+    } else {
+        UIElements.navLocationAudio.pause();
+        UIElements.navLocationAudio.currentTime = 0;
+    }
+
     showGameView('locationNav');
     initMap('location-map');
 
@@ -948,6 +965,11 @@ function stopLocationTracking() {
     if (map && targetCircle) {
         map.removeLayer(targetCircle);
         targetCircle = null;
+    }
+    // Pause and reset location audio
+    if (UIElements.navLocationAudio) {
+        UIElements.navLocationAudio.pause();
+        UIElements.navLocationAudio.currentTime = 0;
     }
 }
 
