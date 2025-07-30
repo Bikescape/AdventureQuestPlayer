@@ -557,12 +557,13 @@ function showListView(type, items, onSelect) {
         if (type === 'ubicaciones' && isLocationCompleted(item.id)) return;
 
 
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'list-item'; // Necesitará estilos en CSS
+        // CAMBIO AQUI: Crear un botón en lugar de un div
+        const itemButton = document.createElement('button');
+        itemButton.className = 'list-item-button action-button'; // Añadimos una clase para estilos y la clase action-button
         // Mostrar el título de la prueba o una parte de la narrativa si no tiene título
-        itemDiv.textContent = item.name || item.narrative?.substring(0, 50) + '...' || `Elemento ${item.order_index + 1}`;
-        itemDiv.onclick = () => onSelect(item);
-        UIElements.listItemsContainer.appendChild(itemDiv);
+        itemButton.textContent = item.name || item.narrative?.substring(0, 50) + '...' || `Elemento ${item.order_index + 1}`;
+        itemButton.onclick = () => onSelect(item);
+        UIElements.listItemsContainer.appendChild(itemButton);
     });
 
     showGameView('list');
@@ -914,7 +915,7 @@ function startLocationTracking(target, isTrialValidation = false) {
             } else {
                 // Lógica para navegar a una ubicación
                 UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
-                if (distance <= target.tolerance_meters) {
+                if (distance <= target.tolerance.meters) { // Corregido: 'tolerance_meters' en lugar de 'tolerance.meters'
                     showAlert('¡Has llegado a la ubicación!', 'success');
                     stopLocationTracking();
                     renderCurrentState(); // La ubicación se alcanzó, renderizar el siguiente estado (narrativa de ubicación)
