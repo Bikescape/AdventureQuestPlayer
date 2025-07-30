@@ -166,10 +166,12 @@ function attachEventListeners() {
     });
     // NUEVOS LISTENERS PARA LOS BOTONES DE VOLVER AL LISTADO
     UIElements.backToListFromNavBtn.addEventListener('click', () => {
+        console.log("Botón 'Volver a Ubicaciones' clicado."); // AÑADIDO PARA DEPURACIÓN
         stopLocationTracking(); // Detener seguimiento GPS
         advanceToNextLocation(); // Llama a la lógica para mostrar el listado de ubicaciones
     });
     UIElements.backToListFromTrialBtn.addEventListener('click', () => {
+        console.log("Botón 'Volver a Pruebas' clicado."); // AÑADIDO PARA DEPURACIÓN
         stopTrialTimer(); // Detener el temporizador de la prueba
         startLocationTrials(); // Llama a la lógica para mostrar el listado de pruebas de la ubicación
     });
@@ -204,11 +206,21 @@ function showScreen(screenName) {
  * @param {string} viewName - Nombre de la vista a mostrar.
  */
 function showGameView(viewName) {
+    console.log(`showGameView() llamada para: ${viewName}`); // AÑADIDO PARA DEPURACIÓN
     Object.keys(gameViews).forEach(key => {
-        gameViews[key].classList.add('hidden');
+        if (gameViews[key]) { // Añadir comprobación por si el elemento es null (aunque no debería con el HTML ya corregido)
+            gameViews[key].classList.add('hidden');
+            gameViews[key].style.display = 'none'; // Ocultar directamente
+        }
     });
     if (gameViews[viewName]) {
         gameViews[viewName].classList.remove('hidden');
+        gameViews[viewName].style.display = 'block'; // Forzar visibilidad
+        // Para elementos con display flex/grid, usa:
+        // gameViews[viewName].style.display = 'flex';
+        // O: gameViews[viewName].style.display = 'grid';
+        // Dependiendo de cómo lo tengas definido en tu CSS para esa vista.
+        // Si no estás seguro, 'block' es un buen inicio.
     }
 }
 
@@ -423,8 +435,11 @@ function renderCurrentState() {
  * También gestiona si el juego es de ubicaciones lineales o seleccionables.
  */
 function advanceToNextLocation() {
+    console.log("Función advanceToNextLocation() llamada."); // AÑADIDO PARA DEPURACIÓN
     stopLocationTracking(); // Detener el seguimiento GPS al cambiar de ubicación
     const game = gameState.gameData;
+
+    console.log("Tipo de aventura:", game.adventure_type); // AÑADIDO PARA DEPURACIÓN
 
     if (game.adventure_type === 'linear') {
         gameState.currentLocationIndex++; // Avanzar al siguiente índice lineal
@@ -444,7 +459,10 @@ function advanceToNextLocation() {
         // sino que el usuario lo elegirá de una lista.
         const uncompletedLocations = game.locations.filter(loc => !isLocationCompleted(loc.id));
 
+        console.log("Ubicaciones no completadas:", uncompletedLocations.length, uncompletedLocations); // AÑADIDO PARA DEPURACIÓN
+
         if (uncompletedLocations.length > 0) {
+            console.log("Mostrando lista de ubicaciones..."); // AÑADIDO PARA DEPURACIÓN
             showListView('ubicaciones', uncompletedLocations, (selectedLoc) => {
                 // Al seleccionar una ubicación de la lista, actualizamos el índice
                 gameState.currentLocationIndex = game.locations.findIndex(l => l.id === selectedLoc.id);
@@ -454,6 +472,7 @@ function advanceToNextLocation() {
             });
         } else {
             // Todas las ubicaciones completadas en modo seleccionable
+            console.log("Todas las ubicaciones completadas. Terminando juego."); // AÑADIDO PARA DEPURACIÓN
             gameState.isCompleted = true;
             renderCurrentState(); // Esto llamará a endGame()
         }
@@ -465,11 +484,13 @@ function advanceToNextLocation() {
  * Determina si son lineales o seleccionables.
  */
 function startLocationTrials() {
+    console.log("startLocationTrials() llamada."); // AÑADIDO PARA DEPURACIÓN
     stopLocationTracking(); // Asegurarse de que el seguimiento de ubicación no interfiera con las pruebas
     const location = gameState.gameData.locations[gameState.currentLocationIndex];
 
     if (location.is_selectable_trials) {
         // Mostrar lista de pruebas para que el jugador elija
+        console.log("Mostrando lista de pruebas para ubicación seleccionable."); // AÑADIDO PARA DEPURACIÓN
         showListView('pruebas', location.trials, (trial) => {
             // Encontrar el índice de la prueba seleccionada y empezarla
             gameState.currentTrialIndex = location.trials.findIndex(t => t.id === trial.id);
@@ -477,6 +498,7 @@ function startLocationTrials() {
         });
     } else {
         // Empezar la primera prueba (o la siguiente lineal)
+        console.log("Avanzando a la siguiente prueba lineal."); // AÑADIDO PARA DEPURACIÓN
         advanceToNextTrial();
     }
 }
@@ -485,13 +507,16 @@ function startLocationTrials() {
  * Avanza a la siguiente prueba en la ubicación actual (solo para juegos/pruebas lineales).
  */
 function advanceToNextTrial() {
+    console.log("advanceToNextTrial() llamada."); // AÑADIDO PARA DEPURACIÓN
     gameState.currentTrialIndex++;
     const location = gameState.gameData.locations[gameState.currentLocationIndex];
 
     // Si todas las pruebas de la ubicación actual se han completado
     if (gameState.currentTrialIndex >= location.trials.length) {
+        console.log("Todas las pruebas de la ubicación actual completadas. Avanzando a la siguiente ubicación."); // AÑADIDO PARA DEPURACIÓN
         advanceToNextLocation(); // Pasar a la siguiente ubicación
     } else {
+        console.log(`Renderizando prueba ${gameState.currentTrialIndex + 1} de ${location.trials.length}.`); // AÑADIDO PARA DEPURACIÓN
         renderCurrentState(); // Renderizar la siguiente prueba lineal
     }
 }
@@ -509,6 +534,7 @@ function advanceToNextTrial() {
  * @param {function} onContinue - Callback a ejecutar al pulsar continuar.
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
+    console.log("showNarrativeView() llamada."); // AÑADIDO PARA DEPURACIÓN
     UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
 
     UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
@@ -531,6 +557,7 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
  * @param {object} location - La ubicación destino.
  */
 function showLocationNavigationView(location) {
+    console.log("showLocationNavigationView() llamada."); // AÑADIDO PARA DEPURACIÓN
     UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
     UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
 
@@ -567,8 +594,13 @@ function showLocationNavigationView(location) {
     // Mostrar el botón "Volver al Listado" si el juego es de ubicaciones seleccionables
     if (gameState.gameData.adventure_type === 'selectable') {
         UIElements.backToListFromNavBtn.classList.remove('hidden');
+        // Asegurarse de que el display no sea 'none'
+        if (UIElements.backToListFromNavBtn.style.display === 'none') {
+            UIElements.backToListFromNavBtn.style.display = 'block'; // O 'inline-block', 'flex', etc. según tu diseño
+        }
     } else {
         UIElements.backToListFromNavBtn.classList.add('hidden');
+        UIElements.backToListFromNavBtn.style.display = 'none';
     }
 }
 
@@ -579,6 +611,7 @@ function showLocationNavigationView(location) {
  * @param {function} onSelect - Callback a ejecutar con el item seleccionado.
  */
 function showListView(type, items, onSelect) {
+    console.log(`showListView() llamada para tipo: ${type} con ${items.length} items.`); // AÑADIDO PARA DEPURACIÓN
     UIElements.listTitle.textContent = type === 'ubicaciones' ? 'Elige tu próximo destino' : 'Elige tu próxima prueba';
     UIElements.listItemsContainer.innerHTML = '';
 
@@ -601,8 +634,14 @@ function showListView(type, items, onSelect) {
 
     showGameView('list');
     // Asegurarse de ocultar los botones de volver al listado al mostrar la vista de lista
-    UIElements.backToListFromNavBtn.classList.add('hidden');
-    UIElements.backToListFromTrialBtn.classList.add('hidden');
+    if (UIElements.backToListFromNavBtn) { // Comprobar si existe antes de manipular
+        UIElements.backToListFromNavBtn.classList.add('hidden');
+        UIElements.backToListFromNavBtn.style.display = 'none';
+    }
+    if (UIElements.backToListFromTrialBtn) { // Comprobar si existe antes de manipular
+        UIElements.backToListFromTrialBtn.classList.add('hidden');
+        UIElements.backToListFromTrialBtn.style.display = 'none';
+    }
 }
 
 /**
@@ -610,7 +649,7 @@ function showListView(type, items, onSelect) {
  * @param {object} trial - El objeto de la prueba.
  */
 function renderTrial(trial) {
-    console.log("Rendering trial:", trial);
+    console.log("Rendering trial:", trial); // AÑADIDO PARA DEPURACIÓN
     UIElements.trialNarrative.innerHTML = trial.narrative;
 
     UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
@@ -631,8 +670,13 @@ function renderTrial(trial) {
     const currentLocation = getCurrentLocation();
     if (currentLocation && currentLocation.is_selectable_trials) {
         UIElements.backToListFromTrialBtn.classList.remove('hidden');
+        // Asegurarse de que el display no sea 'none'
+        if (UIElements.backToListFromTrialBtn.style.display === 'none') {
+            UIElements.backToListFromTrialBtn.style.display = 'block'; // O 'inline-block', 'flex', etc.
+        }
     } else {
         UIElements.backToListFromTrialBtn.classList.add('hidden');
+        UIElements.backToListFromTrialBtn.style.display = 'none';
     }
 }
 
@@ -641,6 +685,7 @@ function renderTrial(trial) {
  * @param {object} trial - El objeto de la prueba.
  */
 function renderTrialContent(trial) {
+    console.log("renderTrialContent() llamada para tipo:", trial.trial_type); // AÑADIDO PARA DEPURACIÓN
     UIElements.trialContent.innerHTML = '';
     UIElements.validateAnswer.classList.remove('hidden');
 
@@ -675,6 +720,7 @@ function renderTrialContent(trial) {
  * @param {object} trial - El objeto de la prueba de texto.
  */
 function renderTextTrial(trial) {
+    console.log("renderTextTrial() llamada."); // AÑADIDO PARA DEPURACIÓN
     const question = document.createElement('p');
     question.innerHTML = trial.question;
     question.className = 'trial-question';
@@ -724,6 +770,7 @@ function renderTextTrial(trial) {
  * Valida la respuesta para la prueba actual.
  */
 function validateCurrentAnswer() {
+    console.log("validateCurrentAnswer() llamada."); // AÑADIDO PARA DEPURACIÓN
     const trial = getCurrentTrial();
     if (!trial) return;
 
@@ -765,6 +812,7 @@ function validateCurrentAnswer() {
  * @param {boolean} isCorrect - Si la respuesta fue correcta.
  */
 function processAnswer(isCorrect) {
+    console.log("processAnswer() llamada. Correcta:", isCorrect); // AÑADIDO PARA DEPURACIÓN
     stopTrialTimer(); // Detener el temporizador de prueba
     const trial = getCurrentTrial();
     const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
@@ -796,8 +844,10 @@ function processAnswer(isCorrect) {
         const location = getCurrentLocation();
         setTimeout(() => {
             if (location.is_selectable_trials) {
+                console.log("Prueba correcta en ubicación seleccionable, volviendo a la lista de pruebas."); // AÑADIDO PARA DEPURACIÓN
                 startLocationTrials(); // Volver a la lista de pruebas de la ubicación
             } else {
+                console.log("Prueba correcta en ubicación lineal, avanzando a la siguiente prueba."); // AÑADIDO PARA DEPURACIÓN
                 advanceToNextTrial(); // Avanzar linealmente
             }
         }, 1500);
@@ -813,6 +863,7 @@ function processAnswer(isCorrect) {
  * Solicita una pista para la prueba actual.
  */
 function requestHint() {
+    console.log("requestHint() llamada."); // AÑADIDO PARA DEPURACIÓN
     const trial = getCurrentTrial();
     if (!trial) return;
 
@@ -1012,7 +1063,13 @@ function startQrScanner() {
     UIElements.qrScannerModal.classList.remove('hidden');
 
     if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("qr-reader");
+        try {
+            html5QrCode = new Html5Qrcode("qr-reader");
+        } catch (e) {
+            console.error("Error al inicializar Html5Qrcode:", e);
+            showAlert('Error al preparar el escáner QR. Intenta de nuevo.', 'error');
+            return; // Salir si la inicialización falla
+        }
     }
 
     html5QrCode.start(
@@ -1033,8 +1090,8 @@ function startQrScanner() {
             // console.warn("QR Scan Error:", errorMessage);
         })
         .catch((err) => {
-            console.error("Error al iniciar el escáner QR:", err);
-            showAlert('No se pudo iniciar la cámara. Asegúrate de dar permisos.', 'error');
+            console.error("Error al iniciar la cámara del escáner QR:", err);
+            showAlert('No se pudo iniciar la cámara. Asegúrate de dar permisos o intenta con otro navegador.', 'error');
             stopQrScanner();
         });
 }
