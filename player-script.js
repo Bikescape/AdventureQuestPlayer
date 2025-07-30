@@ -1035,7 +1035,7 @@ async function endGame() {
     stopLocationTracking();
 
     // Calcular el tiempo total a partir del progressLog (esto ya estaba correcto)
-    const finalTimeSeconds = gameState.progressLog.reduce((sum, entry => sum + entry.timeTaken, 0);
+    const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
     gameState.totalTimeSeconds = finalTimeSeconds;
     gameState.isCompleted = true; // Asegurarse de que el estado está marcado como completado
 
