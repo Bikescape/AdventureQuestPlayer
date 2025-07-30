@@ -25,22 +25,22 @@ const UIElements = {
     gameHeader: document.getElementById('game-header'),
     teamNameDisplay: document.getElementById('team-name-display'),
     scoreDisplay: document.getElementById('score-display'),
-    totalTimerDisplay: document.getElementById('total-timer-display'),
+    totalTimerDisplay: document.getElementById('total-timer-display'), // Este ahora mostrará el tiempo acumulado de las pruebas
     gameListContainer: document.getElementById('game-list-container'),
     gameDetailTitle: document.getElementById('game-detail-title'),
     gameDetailMechanics: document.getElementById('game-detail-mechanics'),
     teamNameInput: document.getElementById('team-name-input'),
     narrativeImage: document.getElementById('narrative-image'),
     narrativeAudio: document.getElementById('narrative-audio'),
-    narrativeText: document.getElementById('narrative-text'), // Se usará innerHTML
+    narrativeText: document.getElementById('narrative-text'),
     navLocationName: document.getElementById('nav-location-name'),
-    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'), // Se usará innerHTML
+    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
     distanceInfo: document.getElementById('distance-info'),
     listTitle: document.getElementById('list-title'),
     listItemsContainer: document.getElementById('list-items-container'),
     trialImage: document.getElementById('trial-image'),
     trialAudio: document.getElementById('trial-audio'),
-    trialNarrative: document.getElementById('trial-narrative'), // Se usará innerHTML
+    trialNarrative: document.getElementById('trial-narrative'),
     trialTimerDisplay: document.getElementById('trial-timer-display'),
     trialContent: document.getElementById('trial-content'),
     hintBtn: document.getElementById('hint-btn'),
@@ -69,7 +69,7 @@ const buttons = {
 let selectedGame = null;
 let html5QrCode = null;
 let map, playerMarker, targetMarker, targetCircle;
-let totalTimerInterval, trialTimerInterval;
+let totalTimerInterval, trialTimerInterval; // totalTimerInterval ya no se usará para el display continuo
 let lastTrialStartTime;
 let watchPositionId;
 
@@ -131,7 +131,6 @@ async function initWelcomeScreen() {
                 const card = document.createElement('div');
                 card.className = 'game-card';
                 // La descripción se muestra en la tarjeta de la lista de juegos
-                // CAMBIO AQUÍ: Usar innerHTML para la descripción
                 card.innerHTML = `<h2>${game.title}</h2><p>${game.description}</p>`;
                 card.onclick = () => showGameDetails(game);
                 UIElements.gameListContainer.appendChild(card);
@@ -211,7 +210,6 @@ function showGameView(viewName) {
 function showGameDetails(game) {
     selectedGame = game;
     UIElements.gameDetailTitle.textContent = game.title;
-    // CAMBIO AQUÍ: Usar innerHTML para la mecánica
     UIElements.gameDetailMechanics.innerHTML = game.mechanics;
     UIElements.teamNameInput.value = '';
     showScreen('gameDetail');
@@ -308,8 +306,9 @@ function resumeGame() {
     UIElements.teamNameDisplay.textContent = gameState.teamName;
     UIElements.scoreDisplay.textContent = gameState.totalScore;
 
-    // El temporizador total del juego sí debe ser visible en la cabecera
-    startTotalTimer();
+    // ACTUALIZACIÓN: Ya no se inicia el totalTimerInterval aquí.
+    // El tiempo total se mostrará como la suma de los tiempos de las pruebas completadas.
+    updateTotalTimeDisplay(); // Llamar para mostrar el tiempo acumulado inicial
 
     renderCurrentState();
 }
@@ -345,6 +344,7 @@ async function syncStateWithSupabase() {
         showAlert('Error de sincronización', 'error');
     } else {
         console.log("State synced with Supabase:", updates);
+        updateTotalTimeDisplay(); // Actualizar el display del tiempo total tras la sincronización
     }
 }
 
@@ -495,7 +495,6 @@ function advanceToNextTrial() {
  * @param {function} onContinue - Callback a ejecutar al pulsar continuar.
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
-    // CAMBIO AQUÍ: Usar innerHTML para el texto de la narrativa
     UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
 
     UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
@@ -519,7 +518,6 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
  */
 function showLocationNavigationView(location) {
     UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
-    // CAMBIO AQUÍ: Usar innerHTML para la narrativa pre-llegada
     UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
     showGameView('locationNav');
     initMap('location-map');
@@ -574,7 +572,6 @@ function showListView(type, items, onSelect) {
  */
 function renderTrial(trial) {
     console.log("Rendering trial:", trial);
-    // CAMBIO AQUÍ: Usar innerHTML para la narrativa de la prueba
     UIElements.trialNarrative.innerHTML = trial.narrative;
 
     UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
@@ -632,7 +629,6 @@ function renderTrialContent(trial) {
  */
 function renderTextTrial(trial) {
     const question = document.createElement('p');
-    // CAMBIO AQUÍ: Usar innerHTML para la pregunta
     question.innerHTML = trial.question;
     question.className = 'trial-question';
     UIElements.trialContent.appendChild(question);
@@ -653,7 +649,6 @@ function renderTextTrial(trial) {
             trial.options.forEach(option => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'text-option';
-                // CAMBIO AQUÍ: Usar innerHTML para las opciones
                 optionDiv.innerHTML = option;
                 optionDiv.dataset.value = option;
                 optionDiv.onclick = () => {
@@ -748,7 +743,7 @@ function processAnswer(isCorrect) {
         });
 
         showAlert('¡Correcto!', 'success');
-        syncStateWithSupabase();
+        syncStateWithSupabase(); // Sincroniza y actualizará el display del tiempo total
 
         // Transición a la siguiente prueba / volver a la lista si es seleccionable
         const location = getCurrentLocation();
@@ -795,7 +790,6 @@ function requestHint() {
         return;
     }
 
-    // CAMBIO AQUÍ: Usar innerHTML para el texto de la pista
     UIElements.hintText.innerHTML = hintText;
     UIElements.hintModal.classList.remove('hidden');
 
@@ -808,7 +802,7 @@ function requestHint() {
     UIElements.hintBtn.disabled = hintsUsedData.count >= trial.hint_count;
 
     saveState();
-    syncStateWithSupabase();
+    syncStateWithSupabase(); // Sincroniza y actualizará el display del tiempo total
 }
 
 
@@ -816,20 +810,20 @@ function requestHint() {
 // FUNCIONES DE TEMPORIZADOR
 // =================================================================
 
-function startTotalTimer() {
-    if (totalTimerInterval) clearInterval(totalTimerInterval);
-    const startTime = new Date(gameState.startTime);
-    totalTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((new Date() - startTime) / 1000);
-        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
-        const seconds = String(elapsed % 60).padStart(2, '0');
-        UIElements.totalTimerDisplay.textContent = `${minutes}:${seconds}`;
-    }, 1000);
+// ACTUALIZACIÓN: La función startTotalTimer y stopTotalTimer ya no son necesarias
+// para un temporizador continuo, solo para el cálculo final.
+// La función `updateTotalTimeDisplay` se encargará de mostrar el tiempo acumulado.
+
+/**
+ * Actualiza la visualización del tiempo total acumulado de las pruebas.
+ */
+function updateTotalTimeDisplay() {
+    const totalTimeTrials = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
+    const minutes = String(Math.floor(totalTimeTrials / 60)).padStart(2, '0');
+    const seconds = String(totalTimeTrials % 60).padStart(2, '0');
+    UIElements.totalTimerDisplay.textContent = `${minutes}:${seconds}`;
 }
 
-function stopTotalTimer() {
-    clearInterval(totalTimerInterval);
-}
 
 function startTrialTimer() {
     if (trialTimerInterval) clearInterval(trialTimerInterval);
@@ -1006,10 +1000,10 @@ function stopQrScanner() {
 // =================================================================
 
 async function endGame() {
-    stopTotalTimer(); // Asegura que no haya ningún timer global accidental corriendo
+    // La función stopTotalTimer() ya no es relevante si no hay un timer continuo
     stopLocationTracking();
 
-    // Calcular el tiempo total a partir del progressLog
+    // Calcular el tiempo total a partir del progressLog (esto ya estaba correcto)
     const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
     gameState.totalTimeSeconds = finalTimeSeconds;
     gameState.isCompleted = true; // Asegurarse de que el estado está marcado como completado
