@@ -36,7 +36,7 @@ const UIElements = {
     narrativeAudio: document.getElementById('narrative-audio'),
     narrativeText: document.getElementById('narrative-text'),
     navLocationName: document.getElementById('nav-location-name'),
-    navPreArrivalNarrative: document.getElementById('nav-pre-arrival-narrative'),
+    navPreArrivalNarrative: document: document.getElementById('nav-pre-arrival-narrative'),
     distanceInfo: document.getElementById('distance-info'),
     listTitle: document.getElementById('list-title'),
     listItemsContainer: document.getElementById('list-items-container'),
@@ -161,7 +161,7 @@ function attachEventListeners() {
         location.reload();
     });
     // [CORRECCIÓN 1]: Se ha eliminado la línea que causaba ReferenceError.
-    // El listener para narrativeContinue se adjunta dinámicamente en showNarrativeView.
+    // El listener para narrativeContinue se setea dinámicamente en showNarrativeView.
 }
 
 /**
@@ -312,10 +312,9 @@ function resumeGame() {
     UIElements.teamNameDisplay.textContent = gameState.teamName;
     UIElements.scoreDisplay.textContent = gameState.totalScore;
 
-    // [CORRECCIÓN 3]: El temporizador total solo mostrará la suma de tiempos de prueba,
+    // El temporizador total solo mostrará la suma de tiempos de prueba,
     // no correrá continuamente. UIElements.totalTimerDisplay se actualizará al final
     // y para mostrar el tiempo actual de la prueba, ya se usa trialTimerDisplay.
-    // stopTotalTimer(); // Asegurarse de que no haya un timer total corriendo
 
     renderCurrentState();
 }
@@ -336,7 +335,7 @@ async function syncStateWithSupabase() {
         progress_log: gameState.progressLog,
         hints_used_per_trial: gameState.hints_used_per_trial || [],
         hints_used_global: gameState.globalHintsUsed,
-        total_time_seconds: totalTimeTrials, // [CORRECCIÓN 3]: Tiempo total basado en la suma de pruebas
+        total_time_seconds: totalTimeTrials, // Tiempo total basado en la suma de pruebas
         is_completed: gameState.isCompleted,
         last_activity: new Date().toISOString()
     };
@@ -383,6 +382,7 @@ function renderCurrentState() {
     const trialIndex = gameState.currentTrialIndex;
 
     // Si hemos llegado a una ubicación pero aún no hemos empezado las pruebas (narrativa de ubicación)
+    // Esto se ejecuta cuando se ha avanzado a una nueva ubicación, ya sea linealmente o seleccionándola de la lista.
     if (trialIndex === -1) {
         showNarrativeView(location.initial_narrative, location.image_url, location.audio_url, startLocationTrials);
         return;
@@ -410,23 +410,45 @@ function renderCurrentState() {
 
 /**
  * Avanza a la siguiente ubicación.
+ * También gestiona si el juego es de ubicaciones lineales o seleccionables.
  */
 function advanceToNextLocation() {
     stopLocationTracking(); // Detener el seguimiento GPS al cambiar de ubicación
-    gameState.currentLocationIndex++;
-    gameState.currentTrialIndex = -1; // Reiniciar índice de pruebas para la nueva ubicación
+    const game = gameState.gameData;
 
-    if (gameState.currentLocationIndex >= gameState.gameData.locations.length) {
-        // Se han completado todas las ubicaciones
-        gameState.isCompleted = true;
-        renderCurrentState(); // Esto llamará a endGame()
-        return;
+    if (game.adventure_type === 'linear') {
+        gameState.currentLocationIndex++; // Avanzar al siguiente índice lineal
+        gameState.currentTrialIndex = -1; // Reiniciar índice de pruebas para la nueva ubicación
+
+        if (gameState.currentLocationIndex >= game.locations.length) {
+            // Se han completado todas las ubicaciones
+            gameState.isCompleted = true;
+            renderCurrentState(); // Esto llamará a endGame()
+            return;
+        }
+        const location = game.locations[gameState.currentLocationIndex];
+        showLocationNavigationView(location); // Mostrar mapa para navegar a la nueva ubicación
+    } else { // 'selectable'
+        // Si es seleccionable, no incrementamos el currentLocationIndex aquí,
+        // sino que el usuario lo elegirá de una lista.
+        // Si es la primera vez (locIndex -1) se mostrará la narrativa inicial y luego se llamará a esta misma función
+        // donde se le mostrará la lista de ubicaciones.
+        // Si ya hay una ubicación en curso, esta función es llamada después de su narrativa para mostrar la lista de pruebas de esa ubicación.
+        const uncompletedLocations = game.locations.filter(loc => !isLocationCompleted(loc.id));
+        
+        if (uncompletedLocations.length > 0) {
+            showListView('ubicaciones', uncompletedLocations, (selectedLoc) => {
+                // Al seleccionar una ubicación de la lista, actualizamos el índice
+                gameState.currentLocationIndex = game.locations.findIndex(l => l.id === selectedLoc.id);
+                gameState.currentTrialIndex = -1; // Reiniciar para la nueva ubicación seleccionada
+                renderCurrentState(); // Esto llevará a la narrativa de la ubicación seleccionada
+            });
+        } else {
+            // Todas las ubicaciones completadas en modo seleccionable
+            gameState.isCompleted = true;
+            renderCurrentState(); // Esto llamará a endGame()
+        }
     }
-
-    const location = gameState.gameData.locations[gameState.currentLocationIndex];
-
-    // Mostrar el mapa para navegar a la nueva ubicación
-    showLocationNavigationView(location);
 }
 
 /**
@@ -438,14 +460,14 @@ function startLocationTrials() {
     const location = gameState.gameData.locations[gameState.currentLocationIndex];
 
     if (location.is_selectable_trials) {
-        // [CORRECCIÓN 4]: Mostrar lista de pruebas para que el jugador elija
+        // Mostrar lista de pruebas para que el jugador elija
         showListView('pruebas', location.trials, (trial) => {
             // Encontrar el índice de la prueba seleccionada y empezarla
             gameState.currentTrialIndex = location.trials.findIndex(t => t.id === trial.id);
             renderCurrentState(); // Esto llamará a renderTrial()
         });
     } else {
-        // [CORRECCIÓN 4]: Empezar la primera prueba (o la siguiente lineal)
+        // Empezar la primera prueba (o la siguiente lineal)
         advanceToNextTrial();
     }
 }
@@ -534,11 +556,14 @@ function showListView(type, items, onSelect) {
     sortedItems.forEach(item => {
         // No mostrar pruebas ya completadas para las listas de pruebas
         if (type === 'pruebas' && isTrialCompleted(item.id)) return;
+        // No mostrar ubicaciones ya completadas para las listas de ubicaciones
+        if (type === 'ubicaciones' && isLocationCompleted(item.id)) return;
+
 
         const itemDiv = document.createElement('div');
         itemDiv.className = 'list-item'; // Necesitará estilos en CSS
         // Mostrar el título de la prueba o una parte de la narrativa si no tiene título
-        itemDiv.textContent = item.name || item.narrative?.substring(0, 50) + '...' || `Prueba ${item.order_index + 1}`;
+        itemDiv.textContent = item.name || item.narrative?.substring(0, 50) + '...' || `Elemento ${item.order_index + 1}`;
         itemDiv.onclick = () => onSelect(item);
         UIElements.listItemsContainer.appendChild(itemDiv);
     });
@@ -565,7 +590,7 @@ function renderTrial(trial) {
     UIElements.hintBtn.disabled = hintsUsed >= trial.hint_count;
 
     renderTrialContent(trial);
-    startTrialTimer(); // [CORRECCIÓN 3]: Inicia el temporizador de prueba
+    startTrialTimer(); // Inicia el temporizador de prueba
     showGameView('trial');
 }
 
@@ -698,7 +723,7 @@ function validateCurrentAnswer() {
  * @param {boolean} isCorrect - Si la respuesta fue correcta.
  */
 function processAnswer(isCorrect) {
-    stopTrialTimer(); // [CORRECCIÓN 3]: Detener el temporizador de prueba
+    stopTrialTimer(); // Detener el temporizador de prueba
     const trial = getCurrentTrial();
     const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
     const hintsUsed = getHintsUsedForTrial(trial.id);
@@ -725,7 +750,7 @@ function processAnswer(isCorrect) {
         showAlert('¡Correcto!', 'success');
         syncStateWithSupabase();
 
-        // [CORRECCIÓN 4]: Transición a la siguiente prueba / volver a la lista si es seleccionable
+        // Transición a la siguiente prueba / volver a la lista si es seleccionable
         const location = getCurrentLocation();
         setTimeout(() => {
             if (location.is_selectable_trials) {
@@ -790,7 +815,7 @@ function requestHint() {
 // FUNCIONES DE TEMPORIZADOR
 // =================================================================
 
-// [CORRECCIÓN 3]: Ya no hay un temporizador total visible que corra continuamente.
+// Ya no hay un temporizador total visible que corra continuamente.
 // El tiempo total se calcula al final sumando los tiempos de cada prueba.
 function stopTotalTimer() {
     clearInterval(totalTimerInterval);
@@ -863,7 +888,7 @@ function startLocationTracking(target, isTrialValidation = false) {
                 playerMarker = L.marker(playerLatLng).addTo(map).bindPopup("¡Estás aquí!");
             }
 
-            // [CORRECCIÓN 2]: Ajustar el zoom del mapa para abarcar ambos marcadores
+            // Ajustar el zoom del mapa para abarcar ambos marcadores
             if (targetMarker && playerMarker) { // targetMarker es el de la ubicación/prueba
                 const bounds = L.latLngBounds(playerLatLng, targetLatLng);
                 map.fitBounds(bounds.pad(0.2)); // Añadir un poco de padding
@@ -974,7 +999,7 @@ async function endGame() {
     stopTotalTimer(); // Asegura que no haya ningún timer global accidental corriendo
     stopLocationTracking();
 
-    // [CORRECCIÓN 3]: Calcular el tiempo total a partir del progressLog
+    // Calcular el tiempo total a partir del progressLog
     const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
     gameState.totalTimeSeconds = finalTimeSeconds;
     gameState.isCompleted = true; // Asegurarse de que el estado está marcado como completado
@@ -1049,6 +1074,17 @@ function getCurrentLocation() {
 
 function isTrialCompleted(trialId) {
     return gameState.progressLog.some(log => log.trialId === trialId);
+}
+
+/**
+ * Comprueba si todos las pruebas dentro de una ubicación han sido completadas.
+ * @param {string} locationId - El ID de la ubicación.
+ * @returns {boolean} True si todas las pruebas de la ubicación están completadas, false en caso contrario.
+ */
+function isLocationCompleted(locationId) {
+    const location = gameState.gameData.locations.find(loc => loc.id === locationId);
+    if (!location || !location.trials) return false;
+    return location.trials.every(trial => isTrialCompleted(trial.id));
 }
 
 function getHintsUsedForTrial(trialId) {
