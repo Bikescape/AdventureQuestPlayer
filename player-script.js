@@ -558,46 +558,47 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
  */
 function showLocationNavigationView(location) {
     console.log("showLocationNavigationView() llamada."); // AÑADIDO PARA DEPURACIÓN
-    UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
-    UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
 
-    // Set and display image
+    UIElements.navLocationName.textContent = location.name;
+    UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative || "Dirígete a la ubicación para continuar la aventura.";
+
+    // Mostrar imagen y audio de la ubicación de navegación
     UIElements.navLocationImage.classList.toggle('hidden', !location.image_url);
     UIElements.navLocationImage.src = location.image_url || '';
 
-    // Set and play audio
     UIElements.navLocationAudio.src = location.audio_url || '';
-    if (location.audio_url) {
-        UIElements.navLocationAudio.loop = true; // Loop the audio
-        UIElements.navLocationAudio.play().catch(e => console.log("Location audio play prevented by browser:", e));
-    } else {
-        UIElements.navLocationAudio.pause();
-        UIElements.navLocationAudio.currentTime = 0;
-    }
+    if (location.audio_url) UIElements.navLocationAudio.play().catch(e => console.log("Audio play prevented by browser."));
 
     showGameView('locationNav');
-    initMap('location-map');
 
-    const targetCoords = [location.latitude, location.longitude];
-    targetMarker = L.marker(targetCoords).addTo(map)
-        .bindPopup(location.name)
-        .openPopup();
-    targetCircle = L.circle(targetCoords, {
-        radius: location.tolerance_meters,
-        color: 'orange',
-        fillColor: '#ffc107',
-        fillOpacity: 0.3
-    }).addTo(map);
+    // Inicializar o actualizar el mapa
+    if (!map) {
+        map = L.map('map-container').setView([0, 0], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-    startLocationTracking(location);
+        playerMarker = L.marker([0, 0]).addTo(map).bindPopup("¡Estás aquí!");
+        targetMarker = L.marker([0, 0], { icon: L.icon({ iconUrl: 'assets/target-icon.png', iconSize: [32, 32] }) }).addTo(map).bindPopup(location.name);
+        targetCircle = L.circle([0, 0], { color: 'blue', fillColor: '#30f', fillOpacity: 0.2, radius: 20 }).addTo(map);
+    }
 
-    // Mostrar el botón "Volver al Listado" si el juego es de ubicaciones seleccionables
+    // Asegurarse de que el mapa se invalide (refresque) cuando la vista es visible
+    // Esto es importante si el mapa se inicializa en un contenedor oculto
+    setTimeout(() => {
+        map.invalidateSize();
+        // Centrar y mostrar marcador de destino
+        targetMarker.setLatLng([location.latitude, location.longitude]).setPopupContent(location.name).openPopup();
+        targetCircle.setLatLng([location.latitude, location.longitude]).setRadius(location.radius || 20); // Radio de activación
+
+        // Iniciar el seguimiento de la ubicación
+        startLocationTracking(location);
+    }, 100); // Pequeño retardo para asegurar que el elemento DOM esté renderizado
+
+    // Mostrar u ocultar el botón "Volver a ubicaciones"
     if (gameState.gameData.adventure_type === 'selectable') {
         UIElements.backToListFromNavBtn.classList.remove('hidden');
-        // Asegurarse de que el display no sea 'none'
-        if (UIElements.backToListFromNavBtn.style.display === 'none') {
-            UIElements.backToListFromNavBtn.style.display = 'block'; // O 'inline-block', 'flex', etc. según tu diseño
-        }
+        UIElements.backToListFromNavBtn.style.display = 'block'; // O 'inline-block', 'flex', etc.
     } else {
         UIElements.backToListFromNavBtn.classList.add('hidden');
         UIElements.backToListFromNavBtn.style.display = 'none';
@@ -623,34 +624,34 @@ function showListView(type, items, onSelect) {
         // No mostrar ubicaciones ya completadas para las listas de ubicaciones
         if (type === 'ubicaciones' && isLocationCompleted(item.id)) return;
 
-
         const itemButton = document.createElement('button');
-        itemButton.className = 'list-item-button action-button'; // Añadimos una clase para estilos y la clase action-button
-        // Mostrar el título de la prueba o una parte de la narrativa si no tiene título
-        itemButton.textContent = item.name || item.narrative?.substring(0, 50) + '...' || `Elemento ${item.order_index + 1}`;
+        itemButton.className = 'action-button';
+        itemButton.textContent = item.name || item.title;
         itemButton.onclick = () => onSelect(item);
         UIElements.listItemsContainer.appendChild(itemButton);
     });
 
     showGameView('list');
-    // Asegurarse de ocultar los botones de volver al listado al mostrar la vista de lista
-    if (UIElements.backToListFromNavBtn) { // Comprobar si existe antes de manipular
-        UIElements.backToListFromNavBtn.classList.add('hidden');
-        UIElements.backToListFromNavBtn.style.display = 'none';
-    }
-    if (UIElements.backToListFromTrialBtn) { // Comprobar si existe antes de manipular
+
+    // Mostrar u ocultar el botón "Volver a ubicaciones" (solo si es una lista de pruebas)
+    if (type === 'pruebas') {
+        UIElements.backToListFromTrialBtn.classList.remove('hidden');
+        if (UIElements.backToListFromTrialBtn.style.display === 'none') {
+            UIElements.backToListFromTrialBtn.style.display = 'block'; // O 'inline-block', 'flex', etc.
+        }
+    } else {
         UIElements.backToListFromTrialBtn.classList.add('hidden');
         UIElements.backToListFromTrialBtn.style.display = 'none';
     }
 }
 
 /**
- * Renderiza la vista de una prueba específica.
- * @param {object} trial - El objeto de la prueba.
+ * Renderiza la prueba actual en la vista de prueba.
+ * @param {object} trial - El objeto de la prueba a renderizar.
  */
 function renderTrial(trial) {
-    console.log("Rendering trial:", trial); // AÑADIDO PARA DEPURACIÓN
-    UIElements.trialNarrative.innerHTML = trial.narrative;
+    console.log("renderTrial() llamada para prueba:", trial.title);
+    stopLocationTracking(); // Asegurarse de que el seguimiento GPS no esté activo durante la prueba
 
     UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
     UIElements.trialImage.src = trial.image_url || '';
@@ -658,19 +659,15 @@ function renderTrial(trial) {
     UIElements.trialAudio.src = trial.audio_url || '';
     if (trial.audio_url) UIElements.trialAudio.play().catch(e => console.log("Audio play prevented."));
 
-    UIElements.hintCostDisplay.textContent = trial.hint_cost;
-    const hintsUsed = getHintsUsedForTrial(trial.id);
-    UIElements.hintBtn.disabled = hintsUsed >= trial.hint_count;
-
-    renderTrialContent(trial);
-    startTrialTimer(); // Inicia el temporizador de prueba
+    UIElements.trialNarrative.innerHTML = trial.narrative;
+    renderTrialContent(trial); // Esto renderiza el input/opciones específicas del tipo de prueba
+    startTrialTimer();
+    updateHintButtonState(); // Actualizar el estado del botón de pista
     showGameView('trial');
-
-    // Mostrar el botón "Volver al Listado" si las pruebas de la ubicación son seleccionables
-    const currentLocation = getCurrentLocation();
-    if (currentLocation && currentLocation.is_selectable_trials) {
+    // Asegurarse de mostrar el botón de "Volver a Pruebas" si las pruebas son seleccionables
+    const location = gameState.gameData.locations[gameState.currentLocationIndex];
+    if (location && location.is_selectable_trials) {
         UIElements.backToListFromTrialBtn.classList.remove('hidden');
-        // Asegurarse de que el display no sea 'none'
         if (UIElements.backToListFromTrialBtn.style.display === 'none') {
             UIElements.backToListFromTrialBtn.style.display = 'block'; // O 'inline-block', 'flex', etc.
         }
@@ -698,110 +695,100 @@ function renderTrialContent(trial) {
             UIElements.trialContent.appendChild(qrButton);
             UIElements.validateAnswer.classList.add('hidden'); // La validación es automática
             break;
-
         case 'gps':
-            UIElements.trialContent.innerHTML = `<p>Dirígete a las coordenadas indicadas. La prueba se validará automáticamente cuando estés en la zona.</p><div id="trial-gps-map" class="map-container"></div>`;
-            initMap('trial-gps-map');
-            const targetCoords = [trial.latitude, trial.longitude];
-            targetMarker = L.marker(targetCoords).addTo(map).bindPopup("Punto de la prueba");
-            targetCircle = L.circle(targetCoords, { radius: trial.tolerance_meters }).addTo(map); // Añadir círculo de tolerancia al mapa
-            startLocationTracking(trial, true); // true para modo de validación de prueba
-            UIElements.validateAnswer.classList.add('hidden');
+            UIElements.trialContent.innerHTML = `<p>Dirígete a las coordenadas indicadas. La prueba se validará automáticamente cuando estés en la zona.</p><div id="map-trial-container" style="height: 300px; width: 100%;"></div>`;
+            initMap('map-trial-container', trial.latitude, trial.longitude, trial.radius);
+            startLocationTracking(trial, true); // Iniciar seguimiento para validación de prueba
+            UIElements.validateAnswer.classList.add('hidden'); // La validación es automática
             break;
-
         case 'text':
-            renderTextTrial(trial);
+            UIElements.trialContent.innerHTML = `<input type="text" id="text-answer-input" placeholder="Introduce tu respuesta aquí">`;
             break;
-    }
-}
-
-/**
- * Renderiza los campos para una prueba de tipo Texto.
- * @param {object} trial - El objeto de la prueba de texto.
- */
-function renderTextTrial(trial) {
-    console.log("renderTextTrial() llamada."); // AÑADIDO PARA DEPURACIÓN
-    const question = document.createElement('p');
-    question.innerHTML = trial.question;
-    question.className = 'trial-question';
-    UIElements.trialContent.appendChild(question);
-
-    switch (trial.answer_type) {
-        case 'single_choice':
         case 'numeric':
-            const textInput = document.createElement('input');
-            textInput.type = trial.answer_type === 'numeric' ? 'number' : 'text';
-            textInput.id = 'text-answer-input';
-            textInput.placeholder = 'Escribe tu respuesta aquí';
-            UIElements.trialContent.appendChild(textInput);
+            UIElements.trialContent.innerHTML = `<input type="number" id="text-answer-input" placeholder="Introduce un número">`;
             break;
-
         case 'multiple_options':
             const optionsContainer = document.createElement('div');
             optionsContainer.className = 'text-options-container';
             trial.options.forEach(option => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'text-option';
-                optionDiv.innerHTML = option;
-                optionDiv.dataset.value = option;
-                optionDiv.onclick = () => {
-                    // Deseleccionar otros y seleccionar este
-                    document.querySelectorAll('.text-option').forEach(el => el.classList.remove('selected'));
-                    optionDiv.classList.add('selected');
+                const optionBtn = document.createElement('button');
+                optionBtn.className = 'text-option';
+                optionBtn.textContent = option;
+                optionBtn.dataset.value = option; // Guardar el valor en un data attribute
+                optionBtn.onclick = () => {
+                    document.querySelectorAll('.text-option').forEach(btn => btn.classList.remove('selected'));
+                    optionBtn.classList.add('selected');
                 };
-                optionsContainer.appendChild(optionDiv);
+                optionsContainer.appendChild(optionBtn);
             });
             UIElements.trialContent.appendChild(optionsContainer);
             break;
-
         case 'ordering':
-            // Lógica de ordenación (Drag and Drop simple)
-            showAlert('Prueba de ordenación pendiente de implementación.');
+            UIElements.trialContent.innerHTML = `<p>Arrastra los elementos para ordenarlos correctamente:</p><ul id="sortable-list" class="ordering-container"></ul>`;
+            const sortableList = UIElements.trialContent.querySelector('#sortable-list');
+            trial.options.forEach(option => {
+                const li = document.createElement('li');
+                li.className = 'ordering-item';
+                li.textContent = option;
+                li.dataset.value = option;
+                li.draggable = true;
+                sortableList.appendChild(li);
+            });
+            addDragAndDropListeners(sortableList);
+            break;
+        default:
+            UIElements.trialContent.innerHTML = `<p>Tipo de prueba no soportado o con error de configuración.</p>`;
+            UIElements.validateAnswer.classList.add('hidden');
             break;
     }
 }
 
-
-// =================================================================
-// LÓGICA DE VALIDACIÓN Y GAMIFICACIÓN
-// =================================================================
-
 /**
- * Valida la respuesta para la prueba actual.
+ * Valida la respuesta actual del jugador para la prueba en curso.
  */
 function validateCurrentAnswer() {
-    console.log("validateCurrentAnswer() llamada."); // AÑADIDO PARA DEPURACIÓN
     const trial = getCurrentTrial();
-    if (!trial) return;
+    if (!trial) {
+        showAlert('No hay prueba activa para validar.', 'error');
+        return;
+    }
 
-    let userAnswer = '';
+    let userAnswer;
     let isCorrect = false;
 
-    // Obtener respuesta del usuario según el tipo de prueba
-    if (trial.trial_type === 'text') {
-        switch (trial.answer_type) {
-            case 'single_choice':
+    // Lógica de validación según el tipo de prueba
+    if (trial.trial_type === 'qr' || trial.trial_type === 'gps') {
+        // Estas pruebas tienen su propia lógica de validación automática
+        showAlert('Esta prueba se valida automáticamente.', 'info');
+        return;
+    } else {
+        switch (trial.trial_type) {
+            case 'text':
+                userAnswer = document.getElementById('text-answer-input').value.trim();
+                // Comparación insensible a mayúsculas/minúsculas y acentos
+                isCorrect = removeAccents(userAnswer.toLowerCase()) === removeAccents(trial.correct_answer.toLowerCase());
+                break;
             case 'numeric':
                 userAnswer = document.getElementById('text-answer-input').value.trim();
-                // Comparación insensible a mayúsculas/minúsculas
-                isCorrect = userAnswer.toLowerCase() === trial.correct_answer.toLowerCase();
+                // Comparación estricta para números
+                isCorrect = userAnswer === String(trial.correct_answer);
                 break;
             case 'multiple_options':
                 const selectedOption = document.querySelector('.text-option.selected');
                 userAnswer = selectedOption ? selectedOption.dataset.value : '';
                 isCorrect = userAnswer === trial.correct_answer;
                 break;
+            case 'ordering':
+                const orderedItems = Array.from(document.querySelectorAll('#sortable-list .ordering-item'))
+                    .map(item => item.dataset.value);
+                userAnswer = orderedItems.join(',');
+                isCorrect = userAnswer === trial.correct_answer.join(',');
+                break;
             default:
-                // Por ejemplo, para el tipo 'ordering'
+                // Esto no debería ocurrir si renderTrialContent maneja todos los casos
                 showAlert('Tipo de respuesta no soportado aún.', 'error');
                 return;
         }
-    }
-    // La validación de QR y GPS se maneja en sus propias funciones
-    // Si llegamos aquí para QR/GPS, es un error, ya que tienen validación automática.
-    if (trial.trial_type === 'qr' || trial.trial_type === 'gps') {
-        showAlert('Esta prueba se valida automáticamente.', 'info');
-        return;
     }
 
     processAnswer(isCorrect);
@@ -814,60 +801,56 @@ function validateCurrentAnswer() {
 function processAnswer(isCorrect) {
     console.log("processAnswer() llamada. Correcta:", isCorrect); // AÑADIDO PARA DEPURACIÓN
     stopTrialTimer(); // Detener el temporizador de prueba
+
     const trial = getCurrentTrial();
-    const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
-    const hintsUsed = getHintsUsedForTrial(trial.id);
+    const timeTaken = Math.floor((new Date().getTime() - lastTrialStartTime) / 1000); // Tiempo en segundos
 
     if (isCorrect) {
-        // Calcular puntos
-        const baseScore = gameState.gameData.initial_score_per_trial;
-        const timePenalty = timeTaken; // 1 punto por segundo
-        const hintPenalty = hintsUsed * trial.hint_cost;
-        const trialScore = Math.max(0, baseScore - timePenalty - hintPenalty);
-
-        gameState.totalScore += trialScore;
+        // Añadir puntos a la puntuación total
+        const scoreEarned = trial.score_earned || gameState.gameData.initial_score_per_trial || 0;
+        gameState.totalScore += scoreEarned;
         UIElements.scoreDisplay.textContent = gameState.totalScore;
-
-        // Registrar en el log
-        gameState.progressLog.push({
-            trialId: trial.id,
-            completedAt: new Date().toISOString(),
-            timeTaken: timeTaken, // Tiempo empleado en esta prueba
-            score: trialScore,
-            hintsUsed: hintsUsed
-        });
-
-        showAlert('¡Correcto!', 'success');
-        syncStateWithSupabase(); // Sincroniza y actualizará el display del tiempo total
-
-        // Transición a la siguiente prueba / volver a la lista si es seleccionable
-        const location = getCurrentLocation();
-        setTimeout(() => {
-            if (location.is_selectable_trials) {
-                console.log("Prueba correcta en ubicación seleccionable, volviendo a la lista de pruebas."); // AÑADIDO PARA DEPURACIÓN
-                startLocationTrials(); // Volver a la lista de pruebas de la ubicación
-            } else {
-                console.log("Prueba correcta en ubicación lineal, avanzando a la siguiente prueba."); // AÑADIDO PARA DEPURACIÓN
-                advanceToNextTrial(); // Avanzar linealmente
-            }
-        }, 1500);
-
+        showAlert(`¡Respuesta correcta! Ganaste ${scoreEarned} puntos.`, 'success');
     } else {
-        showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error');
-        // El jugador puede volver a intentarlo, el tiempo sigue corriendo
-        startTrialTimer();
+        showAlert('Respuesta incorrecta. Inténtalo de nuevo.', 'error');
+    }
+
+    // Registrar el progreso, independientemente de si la respuesta fue correcta
+    gameState.progressLog.push({
+        trialId: trial.id,
+        locationId: gameState.gameData.locations[gameState.currentLocationIndex].id,
+        isCorrect: isCorrect,
+        timeTaken: timeTaken,
+        timestamp: new Date().toISOString()
+    });
+
+    saveState();
+    syncStateWithSupabase(); // Sincroniza y actualizará el display del tiempo total
+
+    // Si la respuesta es correcta, avanzamos a la siguiente prueba o ubicación
+    if (isCorrect) {
+        advanceToNextTrial();
     }
 }
 
+
+// =================================================================
+// LÓGICA DE PISTAS
+// =================================================================
+
 /**
- * Solicita una pista para la prueba actual.
+ * Solicita y muestra una pista para la prueba actual.
  */
 function requestHint() {
-    console.log("requestHint() llamada."); // AÑADIDO PARA DEPURACIÓN
     const trial = getCurrentTrial();
-    if (!trial) return;
+    if (!trial) {
+        showAlert('No hay prueba activa para pedir pista.', 'error');
+        return;
+    }
 
-    let hintsUsedData = gameState.hints_used_per_trial?.find(p => p.trialId === trial.id);
+    // Buscar si ya hemos usado pistas para esta prueba
+    let hintsUsedData = gameState.hints_used_per_trial.find(h => h.trialId === trial.id);
+
     if (!hintsUsedData) {
         hintsUsedData = { trialId: trial.id, count: 0 };
         if (!gameState.hints_used_per_trial) gameState.hints_used_per_trial = [];
@@ -882,12 +865,10 @@ function requestHint() {
     // Mostrar la pista correspondiente
     const hintNumber = hintsUsedData.count + 1;
     const hintText = trial[`hint${hintNumber}`];
-
     if (!hintText) {
         showAlert('No hay texto para esta pista.', 'error');
         return;
     }
-
     UIElements.hintText.innerHTML = hintText;
     UIElements.hintModal.classList.remove('hidden');
 
@@ -896,9 +877,7 @@ function requestHint() {
     UIElements.scoreDisplay.textContent = gameState.totalScore;
     hintsUsedData.count++;
     gameState.globalHintsUsed++;
-
     UIElements.hintBtn.disabled = hintsUsedData.count >= trial.hint_count;
-
     saveState();
     syncStateWithSupabase(); // Sincroniza y actualizará el display del tiempo total
 }
@@ -908,64 +887,79 @@ function requestHint() {
 // FUNCIONES DE TEMPORIZADOR
 // =================================================================
 
-// ACTUALIZACIÓN: La función startTotalTimer y stopTotalTimer ya no son necesarias
-// para un temporizador continuo, solo para el cálculo final.
-// La función `updateTotalTimeDisplay` se encargará de mostrar el tiempo acumulado.
-
 /**
- * Actualiza la visualización del tiempo total acumulado de las pruebas.
+ * Inicia el temporizador de una prueba.
  */
-function updateTotalTimeDisplay() {
-    const totalTimeTrials = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
-    const minutes = String(Math.floor(totalTimeTrials / 60)).padStart(2, '0');
-    const seconds = String(totalTimeTrials % 60).padStart(2, '0');
-    UIElements.totalTimerDisplay.textContent = `${minutes}:${seconds}`;
-}
-
-
 function startTrialTimer() {
-    if (trialTimerInterval) clearInterval(trialTimerInterval);
-    lastTrialStartTime = new Date();
+    stopTrialTimer(); // Asegurar que no hay un temporizador previo corriendo
+    lastTrialStartTime = new Date().getTime(); // Registrar el inicio de la prueba
     trialTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((new Date() - lastTrialStartTime) / 1000);
-        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
-        const seconds = String(elapsed % 60).padStart(2, '0');
-        UIElements.trialTimerDisplay.textContent = `${minutes}:${seconds}`;
+        const currentTime = new Date().getTime();
+        const elapsedSeconds = Math.floor((currentTime - lastTrialStartTime) / 1000);
+        UIElements.trialTimerDisplay.textContent = formatTime(elapsedSeconds);
     }, 1000);
 }
 
-function stopTrialTimer() {
-    clearInterval(trialTimerInterval);
-    UIElements.trialTimerDisplay.textContent = '00:00'; // Resetear visualmente el timer de prueba
-}
-
-
-// =================================================================
-// FUNCIONES DE GEOLOCALIZACIÓN Y MAPA (Leaflet)
-// =================================================================
-
 /**
- * Inicializa un mapa Leaflet en el contenedor especificado.
- * @param {string} containerId - El ID del div contenedor del mapa.
+ * Detiene el temporizador de la prueba actual.
  */
-function initMap(containerId) {
-    if (map) {
-        map.remove();
-        map = null;
-    }
-    map = L.map(containerId).setView([43.535, -5.661], 13); // Default Gijón
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    // Inicializar marcador del jugador si no existe
-    if (!playerMarker) {
-        playerMarker = L.marker([0, 0], { opacity: 0.7, icon: L.divIcon({ className: 'player-marker-icon', html: '<div style="background-color: blue; width: 15px; height: 15px; border-radius: 50%;"></div>' }) }).addTo(map).bindPopup("¡Estás aquí!");
-    } else {
-        playerMarker.addTo(map); // Añadirlo de nuevo si el mapa se recreó
+function stopTrialTimer() {
+    if (trialTimerInterval) {
+        clearInterval(trialTimerInterval);
+        trialTimerInterval = null;
     }
 }
 
 /**
- * Inicia el seguimiento de la ubicación del jugador.
+ * Actualiza el display del tiempo total acumulado de las pruebas.
+ */
+function updateTotalTimeDisplay() {
+    const totalTimeTrials = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
+    UIElements.totalTimerDisplay.textContent = formatTime(totalTimeTrials);
+}
+
+/**
+ * Formatea segundos a MM:SS.
+ * @param {number} totalSeconds - Segundos totales.
+ * @returns {string} Tiempo formateado.
+ */
+function formatTime(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+// =================================================================
+// LÓGICA DE GEOLOCALIZACIÓN Y MAPA
+// =================================================================
+
+/**
+ * Inicializa el mapa de Leaflet.
+ * @param {string} mapContainerId - ID del contenedor del mapa.
+ * @param {number} lat - Latitud inicial.
+ * @param {number} lng - Longitud inicial.
+ * @param {number} radius - Radio del círculo objetivo.
+ */
+function initMap(mapContainerId, lat, lng, radius) {
+    if (map) {
+        map.remove(); // Limpiar el mapa existente si lo hay
+    }
+    map = L.map(mapContainerId).setView([lat, lng], 16); // Zoom más cercano para pruebas
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    playerMarker = L.marker([0, 0]).addTo(map).bindPopup("¡Estás aquí!");
+    targetMarker = L.marker([lat, lng], { icon: L.icon({ iconUrl: 'assets/target-icon.png', iconSize: [32, 32] }) }).addTo(map).bindPopup("Objetivo");
+    targetCircle = L.circle([lat, lng], { color: 'blue', fillColor: '#30f', fillOpacity: 0.2, radius: radius || 20 }).addTo(map);
+
+    // Asegurarse de que el mapa se invalide (refresque) cuando la vista es visible
+    setTimeout(() => map.invalidateSize(), 100);
+}
+
+/**
+ * Inicia el rastreo de la posición del jugador.
  * @param {object} target - El objeto (ubicación o prueba GPS) a rastrear.
  * @param {boolean} isTrialValidation - Si estamos validando una prueba GPS.
  */
@@ -976,6 +970,7 @@ function startLocationTracking(target, isTrialValidation = false) {
     }
 
     const targetLatLng = L.latLng(target.latitude, target.longitude);
+    const activationRadius = target.radius || 20; // Radio de activación en metros
 
     if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
 
@@ -998,70 +993,63 @@ function startLocationTracking(target, isTrialValidation = false) {
                 map.setView(playerLatLng, map.getZoom()); // Si solo hay un marcador, centrar en el jugador
             }
 
-
             const distance = playerLatLng.distanceTo(targetLatLng);
+            UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
 
-            if (isTrialValidation) {
-                // Lógica para validar prueba GPS
-                if (distance <= target.tolerance_meters) {
-                    processAnswer(true);
+            // Actualizar barra de progreso de llegada
+            const maxDistanceForProgress = 200; // Distancia a partir de la cual empieza a mostrar progreso
+            let progress = 100 - Math.min(100, (distance / maxDistanceForProgress) * 100);
+            progress = Math.max(0, progress); // Asegurar que no sea negativo
+            document.getElementById('arrival-progress-bar').style.setProperty('--width', `${progress}%`);
+
+
+            // Lógica de validación
+            if (distance <= activationRadius) {
+                if (isTrialValidation) {
+                    stopLocationTracking(); // Detener el seguimiento una vez validado
+                    processAnswer(true); // Validar la prueba GPS
+                    showAlert('¡Ubicación alcanzada! Prueba completada.', 'success');
+                } else {
+                    // Si es una ubicación y se ha alcanzado el destino, avanzar a las pruebas de la ubicación
                     stopLocationTracking();
-                }
-            } else {
-                // Lógica para navegar a una ubicación
-                UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
-                if (distance <= target.tolerance_meters) { // Corregido: 'tolerance_meters' en lugar de 'tolerance.meters'
                     showAlert('¡Has llegado a la ubicación!', 'success');
-                    stopLocationTracking();
-                    renderCurrentState(); // La ubicación se alcanzó, renderizar el siguiente estado (narrativa de ubicación)
+                    startLocationTrials();
                 }
             }
         },
         (error) => {
-            console.error("Geolocation error:", error);
-            UIElements.distanceInfo.textContent = 'No se puede obtener tu ubicación.';
-            // En caso de error de geolocalización, si es para una prueba GPS, se debe informar al usuario
-            if (isTrialValidation) {
-                showAlert('Error de GPS: No se pudo obtener tu ubicación para validar la prueba.', 'error');
-            }
+            console.error("Error al obtener la ubicación:", error);
+            showAlert(`Error de geolocalización: ${error.message}. Asegúrate de habilitar los permisos de ubicación.`, 'error');
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 } // Aumentar timeout por si acaso
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
     );
 }
 
+/**
+ * Detiene el rastreo de la posición del jugador.
+ */
 function stopLocationTracking() {
     if (watchPositionId) {
         navigator.geolocation.clearWatch(watchPositionId);
         watchPositionId = null;
-    }
-    // Eliminar marcadores del mapa cuando el seguimiento se detiene (opcional)
-    if (map && playerMarker) {
-        map.removeLayer(playerMarker);
-        playerMarker = null;
-    }
-    if (map && targetMarker) {
-        map.removeLayer(targetMarker);
-        targetMarker = null;
-    }
-    if (map && targetCircle) {
-        map.removeLayer(targetCircle);
-        targetCircle = null;
-    }
-    // Pause and reset location audio
-    if (UIElements.navLocationAudio) {
-        UIElements.navLocationAudio.pause();
-        UIElements.navLocationAudio.currentTime = 0;
+        console.log("Seguimiento de ubicación detenido.");
     }
 }
 
 
 // =================================================================
-// FUNCIONES DE ESCÁNER QR
+// LÓGICA DE ESCÁNER QR
 // =================================================================
 
+/**
+ * Inicia el escáner QR.
+ */
 function startQrScanner() {
     UIElements.qrScannerModal.classList.remove('hidden');
-
     if (!html5QrCode) {
         try {
             html5QrCode = new Html5Qrcode("qr-reader");
@@ -1092,87 +1080,138 @@ function startQrScanner() {
         .catch((err) => {
             console.error("Error al iniciar la cámara del escáner QR:", err);
             showAlert('No se pudo iniciar la cámara. Asegúrate de dar permisos o intenta con otro navegador.', 'error');
-            stopQrScanner();
+            stopQrScanner(); // Asegurarse de cerrar el modal en caso de error
         });
 }
 
+/**
+ * Detiene el escáner QR.
+ */
 function stopQrScanner() {
-    if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(err => console.error("Error al detener el escáner:", err));
-    }
     UIElements.qrScannerModal.classList.add('hidden');
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            html5QrCode.clear();
+            console.log("QR scanner stopped.");
+        }).catch(err => {
+            console.error("Error stopping QR scanner:", err);
+        });
+    }
 }
 
 
 // =================================================================
-// FIN DEL JUEGO
+// LÓGICA DE DRAG AND DROP (Para pruebas de ordenación)
 // =================================================================
 
+/**
+ * Añade listeners de Drag & Drop a una lista sortable.
+ * @param {HTMLElement} listElement - El elemento <ul> que contiene los items.
+ */
+function addDragAndDropListeners(listElement) {
+    let draggedItem = null;
+
+    listElement.addEventListener('dragstart', (e) => {
+        draggedItem = e.target;
+        setTimeout(() => {
+            e.target.style.opacity = '0.5';
+        }, 0);
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    listElement.addEventListener('dragend', (e) => {
+        e.target.style.opacity = '1';
+        draggedItem = null;
+    });
+
+    listElement.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Permite el drop
+        const target = e.target;
+        if (target.classList.contains('ordering-item') && target !== draggedItem) {
+            const bounding = target.getBoundingClientRect();
+            const offset = bounding.y + (bounding.height / 2);
+            if (e.clientY > offset) {
+                // Dragging below the center of the target
+                listElement.insertBefore(draggedItem, target.nextElementSibling);
+            } else {
+                // Dragging above the center of the target
+                listElement.insertBefore(draggedItem, target);
+            }
+        }
+    });
+
+    listElement.addEventListener('dragleave', (e) => {
+        // No es necesario para esta implementación simple
+    });
+
+    listElement.addEventListener('drop', (e) => {
+        e.preventDefault();
+        // El movimiento ya se realizó en dragover
+    });
+}
+
+
+// =================================================================
+// LÓGICA DE FIN DE JUEGO Y RANKING
+// =================================================================
+
+/**
+ * Termina el juego, muestra la puntuación final y el ranking.
+ */
 async function endGame() {
-    // La función stopTotalTimer() ya no es relevante si no hay un timer continuo
+    stopTrialTimer();
     stopLocationTracking();
 
-    // Calcular el tiempo total a partir del progressLog (esto ya estaba correcto)
-    const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
-    gameState.totalTimeSeconds = finalTimeSeconds;
-    gameState.isCompleted = true; // Asegurarse de que el estado está marcado como completado
-
-    // Sincronización final
-    await syncStateWithSupabase();
-
-    // Mostrar pantalla de fin de juego
     UIElements.finalTeamName.textContent = gameState.teamName;
     UIElements.finalScore.textContent = gameState.totalScore;
-    const minutes = String(Math.floor(finalTimeSeconds / 60)).padStart(2, '0');
-    const seconds = String(finalTimeSeconds % 60).padStart(2, '0');
-    UIElements.finalTime.textContent = `${minutes}m ${seconds}s`;
+    updateTotalTimeDisplay(); // Asegurar que el tiempo final esté actualizado
+    UIElements.finalTime.textContent = UIElements.totalTimerDisplay.textContent;
 
     showScreen('gameOver');
-    loadFinalRanking();
-}
+    UIElements.gameHeader.classList.add('hidden'); // Ocultar el header del juego
 
-async function loadFinalRanking() {
-    UIElements.finalRankingContainer.innerHTML = '<p>Cargando ranking...</p>';
     try {
         const { data, error } = await supabase
             .from('teams')
             .select('name, total_score, total_time_seconds')
             .eq('game_id', gameState.gameId)
-            .eq('is_completed', true)
+            .eq('is_completed', true) // Solo equipos que hayan completado el juego
             .order('total_score', { ascending: false })
-            .order('total_time_seconds', { ascending: true })
-            .limit(10);
+            .order('total_time_seconds', { ascending: true }); // A menor tiempo, mejor
 
         if (error) throw error;
 
-        UIElements.finalRankingContainer.innerHTML = '';
+        UIElements.finalRankingContainer.innerHTML = '<h3>Ranking de Equipos</h3>';
         if (data.length === 0) {
-            UIElements.finalRankingContainer.innerHTML = '<p>Nadie ha completado este juego todavía.</p>';
+            UIElements.finalRankingContainer.innerHTML += '<p>No hay otros equipos en el ranking aún.</p>';
         } else {
+            const rankingList = document.createElement('div');
             data.forEach((team, index) => {
-                const item = document.createElement('div');
-                item.className = 'ranking-item';
-                if (team.name === gameState.teamName) {
-                    item.classList.add('current-team');
-                }
-                const minutes = String(Math.floor(team.total_time_seconds / 60)).padStart(2, '0');
-                const seconds = String(team.total_time_seconds % 60).padStart(2, '0');
-                item.innerHTML = `<span>${index + 1}. ${team.name}</span><span>${team.total_score} pts (${minutes}:${seconds})</span>`;
-                UIElements.finalRankingContainer.appendChild(item);
+                const rankingItem = document.createElement('div');
+                rankingItem.className = `ranking-item ${team.name === gameState.teamName ? 'current-team' : ''}`;
+                rankingItem.innerHTML = `
+                    <span>${index + 1}. ${team.name}</span>
+                    <span>${team.total_score} pts / ${formatTime(team.total_time_seconds || 0)}</span>
+                `;
+                rankingList.appendChild(rankingItem);
             });
+            UIElements.finalRankingContainer.appendChild(rankingList);
         }
-
     } catch (error) {
-        console.error("Error loading final ranking:", error);
+        console.error("Error fetching ranking:", error);
+        showAlert('No se pudo cargar el ranking.', 'error');
         UIElements.finalRankingContainer.innerHTML = '<p>No se pudo cargar el ranking.</p>';
     }
 }
-
 
 // =================================================================
 // FUNCIONES DE UTILIDAD
 // =================================================================
 
+/**
+ * Obtiene la prueba actual del estado del juego.
+ * @returns {object|null} La prueba actual o null si no hay ninguna.
+ */
 function getCurrentTrial() {
     if (gameState.currentLocationIndex === -1 || gameState.currentTrialIndex === -1) return null;
     const location = gameState.gameData.locations[gameState.currentLocationIndex];
@@ -1180,19 +1219,19 @@ function getCurrentTrial() {
     return location.trials[gameState.currentTrialIndex];
 }
 
-function getCurrentLocation() {
-    if (gameState.currentLocationIndex === -1) return null;
-    return gameState.gameData.locations[gameState.currentLocationIndex];
-}
-
+/**
+ * Verifica si una prueba ha sido completada por el equipo.
+ * @param {string} trialId - ID de la prueba.
+ * @returns {boolean} True si la prueba está en el log de progreso y marcada como correcta.
+ */
 function isTrialCompleted(trialId) {
-    return gameState.progressLog.some(log => log.trialId === trialId);
+    return gameState.progressLog.some(entry => entry.trialId === trialId && entry.isCorrect);
 }
 
 /**
- * Comprueba si todos las pruebas dentro de una ubicación han sido completadas.
- * @param {string} locationId - El ID de la ubicación.
- * @returns {boolean} True si todas las pruebas de la ubicación están completadas, false en caso contrario.
+ * Verifica si todas las pruebas de una ubicación han sido completadas.
+ * @param {string} locationId - ID de la ubicación.
+ * @returns {boolean} True si todas las pruebas de la ubicación están completadas.
  */
 function isLocationCompleted(locationId) {
     const location = gameState.gameData.locations.find(loc => loc.id === locationId);
@@ -1200,25 +1239,44 @@ function isLocationCompleted(locationId) {
     return location.trials.every(trial => isTrialCompleted(trial.id));
 }
 
-function getHintsUsedForTrial(trialId) {
-    const hintData = gameState.hints_used_per_trial?.find(p => p.trialId === trialId);
-    return hintData ? hintData.count : 0;
+/**
+ * Actualiza el estado del botón de pista según las pistas disponibles.
+ */
+function updateHintButtonState() {
+    const trial = getCurrentTrial();
+    if (!trial) {
+        UIElements.hintBtn.classList.add('hidden');
+        return;
+    }
+    const hintsUsedData = gameState.hints_used_per_trial.find(h => h.trialId === trial.id);
+    const hintsCount = hintsUsedData ? hintsUsedData.count : 0;
+
+    UIElements.hintBtn.classList.toggle('hidden', trial.hint_count === 0);
+    UIElements.hintBtn.disabled = hintsCount >= trial.hint_count;
+    UIElements.hintCostDisplay.textContent = `Coste: ${trial.hint_cost || 0} pts`;
 }
 
 /**
- * Muestra una alerta temporal al usuario.
+ * Muestra una alerta temporal.
  * @param {string} message - Mensaje a mostrar.
- * @param {'success'|'error'|'info'} type - Tipo de alerta.
+ * @param {string} type - 'success' o 'error'.
  */
-function showAlert(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `app-alert ${type}`;
-    alertDiv.textContent = message;
-    document.body.appendChild(alertDiv);
-
-    // Fade out y remover
+function showAlert(message, type) {
+    const alertBox = document.getElementById('app-alert');
+    alertBox.textContent = message;
+    alertBox.className = ''; // Limpiar clases anteriores
+    alertBox.classList.add(type);
+    alertBox.classList.remove('hidden');
     setTimeout(() => {
-        alertDiv.style.opacity = '0';
-        setTimeout(() => alertDiv.remove(), 500);
+        alertBox.classList.add('hidden');
     }, 3000);
+}
+
+/**
+ * Elimina acentos de una cadena de texto.
+ * @param {string} str - La cadena de entrada.
+ * @returns {string} La cadena sin acentos.
+ */
+function removeAccents(str) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
