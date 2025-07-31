@@ -1,543 +1,638 @@
 /* player-styles.css */
 
-/* Variables CSS */
+/* ======== RESET Y VARIABLES GLOBALES ======== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Evita el flash azul en móviles */
+}
+
 :root {
-    --primary-color: #4CAF50; /* Verde */
-    --secondary-color: #FFC107; /* Ámbar */
-    --background-color: #f4f4f4;
-    --text-color: #333;
-    --card-background: #ffffff;
+    --primary-color: #ff9800; /* Naranja vibrante para jugadores */
+    --primary-dark: #f57c00;
+    --secondary-color: #795548; /* Marrón para un toque de aventura */
+    --success-color: #4caf50;
+    --error-color: #f44336;
+    --background: #fff3e0; /* Un crema claro de fondo */
+    --surface: #ffffff;
+    --text-primary: #3e2723; /* Marrón oscuro para texto */
+    --text-secondary: #6d4c41;
+    --border: #d7ccc8;
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
     --border-radius: 8px;
-    --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    --button-hover-darken: 10%;
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --app-max-width: 600px; /* Ancho máximo para el contenido principal */
 }
 
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 #app-container {
-    background-color: #fff;
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-    width: 100%;
-    max-width: 600px;
-    margin: 20px;
-    padding: 20px;
-    box-sizing: border-box;
-    position: relative; /* Necesario para la alerta */
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - 40px); /* Para que el contenido pueda crecer */
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+    /* max-width: var(--app-max-width); */ /* Eliminado porque cada section.screen ya lo tiene */
+    margin: 0 auto;
+    position: relative; /* Para posicionar alertas */
 }
 
-/* Pantallas principales */
+/* ======== PANTALLAS PRINCIPALES ======== */
 .screen {
     width: 100%;
-    height: 100%;
+    max-width: var(--app-max-width); /* Asegura que las pantallas no se estiren demasiado */
     display: flex;
     flex-direction: column;
-    justify-content: flex-start; /* Alinea el contenido hacia arriba */
-    flex-grow: 1; /* Permite que la pantalla ocupe el espacio disponible */
+    align-items: center;
+    padding: 20px;
+    text-align: center;
 }
 
 .screen.hidden {
     display: none;
 }
 
-/* Estilos de encabezado y pie de página */
+/* Contenedor general para el contenido con fondo y sombra */
+.content-box {
+    background: var(--surface);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: var(--app-max-width); /* Restringe el ancho del contenido interno */
+    box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+}
+
+/* ======== HEADER DEL JUEGO ======== */
 #game-header {
+    background: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
-    font-weight: bold;
-    color: var(--primary-color);
-    font-size: 1.1em;
-}
-
-#game-header .header-item {
-    text-align: center;
-}
-
-/* Alerta */
-#app-alert {
-    position: absolute;
-    top: 0px; /* Ajustado para estar dentro del app-container pero en la parte superior */
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #f44336; /* Rojo para error */
-    color: white;
-    padding: 10px 20px;
-    border-radius: var(--border-radius);
-    text-align: center;
+    width: 100%;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
     z-index: 1000;
-    width: calc(100% - 40px); /* Ajustar al ancho del contenedor */
-    box-sizing: border-box;
-    transition: top 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
-#app-alert.success {
-    background-color: var(--primary-color); /* Verde para éxito */
-}
-
-#app-alert.hidden {
-    top: -50px; /* Ocultar arriba */
-    opacity: 0;
-    pointer-events: none; /* Evita interacciones cuando está oculto */
-}
-
-
-/* General layout for views within game-play-screen */
-.game-view {
-    display: none; /* Controlled by JS to show/hide with flex or block */
-    flex-direction: column;
-    gap: 15px; /* Espacio entre elementos de la vista */
-    flex-grow: 1;
-    justify-content: center; /* Centrar contenido verticalmente */
-    text-align: center; /* Centrar texto e imágenes */
-}
-
-.game-view.hidden {
-    display: none !important; /* Forzar ocultamiento */
-}
-
-/* Specific view styles */
-#narrative-view,
-#trial-view,
-#location-navigation-view {
-    justify-content: flex-start; /* Alinea el contenido hacia arriba para dejar espacio */
-    padding-top: 20px;
-    padding-bottom: 20px;
-}
-
-#narrative-view p,
-#trial-view p,
-#location-navigation-view p {
-    font-size: 1.1em;
-    line-height: 1.6;
-    margin-bottom: 20px;
-    text-align: center;
-    max-width: 100%; /* Asegura que el texto no se desborde */
-}
-
-/* Imagen de narrativa y prueba */
-.narrative-image {
-    max-width: 100%; /* Asegura que la imagen no se desborde */
-    height: auto; /* Mantiene la relación de aspecto */
-    border-radius: var(--border-radius);
-    margin-bottom: 20px;
-    object-fit: contain; /* Asegura que la imagen completa sea visible sin recortarse */
-    display: block; /* Para que margin: auto funcione */
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.narrative-image.hidden {
+#game-header.hidden {
     display: none;
 }
 
+#team-info {
+    font-weight: bold;
+    font-size: 1.1em;
+}
 
-/* Botones y formularios */
-.action-button,
-.text-option {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
+#game-stats {
+    display: flex;
+    gap: 15px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.9em;
+}
+
+.stat-label {
+    font-weight: normal;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+/* ======== ESTILOS GLOBALES DE BOTONES ======== */
+.action-button, .secondary-button, .hint-button, .cancel-button, .save-button {
     padding: 12px 25px;
+    border: none;
     border-radius: var(--border-radius);
     cursor: pointer;
     font-size: 1em;
-    transition: background-color 0.3s ease;
-    width: 100%;
-    box-sizing: border-box; /* Incluye padding y border en el width */
-    margin-bottom: 10px; /* Espacio entre botones */
+    font-weight: bold;
+    transition: var(--transition);
+    margin-top: 10px; /* Espacio entre botones */
 }
 
-.action-button:hover,
-.text-option:hover {
-    background-color: color-mix(in srgb, var(--primary-color) 90%, black var(--button-hover-darken));
+.action-button {
+    background: var(--primary-color);
+    color: white;
 }
 
-.action-button:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
+.action-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
 }
 
-input[type="text"],
-input[type="number"] {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
-    border: 1px solid #ddd;
+.secondary-button {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.secondary-button:hover {
+    background: #5d4037; /* Tono más oscuro de marrón */
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.hint-button {
+    background: #03a9f4; /* Azul para pistas */
+    color: white;
+}
+
+.hint-button:hover {
+    background: #0288d1;
+}
+
+/* Estilos para imágenes de narrativa y prueba */
+.narrative-image, #trial-image {
+    max-width: 100%; /* Asegura que la imagen no exceda el ancho de su contenedor */
+    height: auto; /* Mantiene la proporción de la imagen */
+    display: block; /* Elimina espacio extra inferior y permite margin auto */
+    margin: 10px auto; /* Centra la imagen y da espacio vertical */
     border-radius: var(--border-radius);
-    box-sizing: border-box;
-    font-size: 1em;
+    box-shadow: var(--shadow);
 }
 
-.team-name-section {
-    margin-bottom: 20px;
+/* ======== PANTALLA DE CARGA ======== */
+#loading-screen {
+    justify-content: center;
+    height: 100%;
 }
 
-/* Game List */
+.loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ======== PANTALLA DE BIENVENIDA ======== */
+#welcome-screen h1 {
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-size: 2em;
+}
+
 #game-list-container {
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 15px;
-    width: 100%;
-    overflow-y: auto; /* Permite scroll si hay muchos juegos */
-    flex-grow: 1; /* Permite que el contenedor de la lista ocupe el espacio */
-    padding-bottom: 20px; /* Espacio para el scroll */
+    text-align: left;
 }
 
 .game-card {
-    background-color: var(--card-background);
+    background: var(--surface);
     padding: 20px;
     border-radius: var(--border-radius);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow);
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: var(--transition);
     text-align: left;
 }
 
 .game-card:hover {
     transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
 .game-card h2 {
-    margin-top: 0;
-    color: var(--primary-color);
-    font-size: 1.3em;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    font-size: 1.5em;
 }
 
 .game-card p {
-    font-size: 0.9em;
-    color: #666;
-    margin-bottom: 0;
+    color: var(--text-secondary);
+    font-size: 0.95em;
 }
 
-
-/* Game Detail */
-#game-detail-screen {
-    text-align: center;
-}
-
+/* ======== PANTALLA DE DETALLE DE JUEGO ======== */
 #game-detail-screen h2 {
     color: var(--primary-color);
-    margin-bottom: 10px;
-}
-
-#game-detail-screen p {
-    margin-bottom: 20px;
-    font-size: 1em;
-    line-height: 1.5;
-}
-
-/* Location Navigation View (Map) */
-#map-container, #map-trial-container {
-    width: 100%;
-    height: 300px;
-    border-radius: var(--border-radius);
     margin-bottom: 15px;
-    background-color: #e0e0e0; /* Fallback color */
+    font-size: 1.8em;
+}
+
+#game-detail-screen h3 {
+    color: var(--text-primary);
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+#start-form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px; /* Controla el ancho del formulario */
+    margin-top: 20px;
+}
+
+#team-name-input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    font-size: 1em;
+    color: var(--text-primary);
+}
+
+/* ======== PANTALLA DE JUEGO (GAMEPLAY) ======== */
+#game-play-screen {
+    justify-content: flex-start; /* Alinea el contenido arriba */
+    padding-top: 0; /* Ya el header tiene padding */
+}
+
+/* Vistas dentro de GamePlay */
+.game-view {
+    width: 100%;
+    max-width: var(--app-max-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 0; /* Solo padding vertical */
+}
+
+.game-view.hidden {
+    display: none;
+}
+
+/* Vista de Narrativa */
+.narrative-box {
+    padding-bottom: 30px; /* Más espacio para el botón */
+}
+
+#narrative-text {
+    font-size: 1.1em;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    text-align: justify; /* Justifica el texto para mejor lectura */
+    hyphens: auto; /* Permite guiones automáticos para mejor ajuste */
+    word-wrap: break-word; /* Asegura que las palabras largas se rompan */
+}
+
+#narrative-audio {
+    width: 100%;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    border-radius: var(--border-radius);
+    /* No mostrar controles si se reproduce automáticamente en segundo plano */
+    /* display: none; */
+}
+
+
+/* Vista de Navegación de Ubicación (Mapa) */
+#location-navigation-view {
+    padding-bottom: 30px;
+}
+
+#nav-location-name {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.8em;
+}
+
+#nav-pre-arrival-narrative {
+    font-size: 1em;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.map-container {
+    width: 100%;
+    height: 60vh; /* Altura responsiva del mapa, por ejemplo 60% del viewport height */
+    min-height: 300px; /* Altura mínima para que sea visible en pantallas pequeñas */
+    background: var(--border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    margin-top: 20px;
+    overflow: hidden; /* Asegura que el mapa no se salga de los bordes */
 }
 
 #distance-info {
+    margin-top: 15px;
+    font-size: 1.1em;
     font-weight: bold;
-    margin-bottom: 15px;
+    color: var(--text-primary);
 }
 
-.progress-bar-container {
+.arrival-status {
     width: 100%;
-    background-color: #e0e0e0;
-    border-radius: 5px;
-    height: 20px;
-    margin-bottom: 15px;
-    overflow: hidden; /* Asegura que la barra de progreso no se salga */
+    max-width: 400px;
+    margin-top: 15px;
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--text-secondary);
 }
 
-.progress-bar {
+#arrival-progress-bar {
+    width: 100%;
+    height: 10px;
+    background-color: var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+#arrival-progress-bar::before {
+    content: '';
+    display: block;
+    width: var(--progress-width, 0%); /* Variable CSS para controlar el ancho */
     height: 100%;
-    width: var(--width, 0%); /* --width es una variable CSS que se actualiza con JS */
-    background-color: var(--primary-color);
+    background-color: var(--success-color);
     border-radius: 5px;
     transition: width 0.5s ease-out;
 }
 
-/* List View (Ubicaciones / Pruebas) */
+/* Vista de Lista (Ubicaciones/Pruebas) */
 #list-view {
-    text-align: center;
-    justify-content: flex-start;
-    padding-top: 20px;
-    padding-bottom: 20px;
+    padding-top: 0;
+}
+
+#list-title {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 1.8em;
 }
 
 #list-items-container {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
-    flex-grow: 1;
-    overflow-y: auto;
-    padding-bottom: 20px;
+    gap: 15px;
+    text-align: left;
 }
 
-#list-view .action-button {
-    width: 80%; /* Hacer los botones de lista un poco más estrechos */
-    max-width: 300px; /* Limitar el ancho máximo */
-    margin-left: auto;
-    margin-right: auto;
+.status-completed {
+    color: var(--success-color);
+    font-weight: bold;
+    margin-left: 10px;
 }
 
-/* Trial View (Pruebas) */
+.status-in-progress, .status-pending {
+    color: var(--secondary-color);
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+
+/* Vista de Prueba */
 #trial-view {
-    text-align: center;
-    justify-content: flex-start;
-    padding-top: 20px;
-    padding-bottom: 20px;
+    padding-bottom: 30px;
+}
+
+#trial-header {
+    display: flex;
+    justify-content: flex-end; /* Alinea el temporizador a la derecha */
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.trial-timer {
+    background: var(--primary-color);
+    color: white;
+    padding: 8px 15px;
+    border-radius: var(--border-radius);
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+#trial-narrative {
+    font-size: 1.1em;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    text-align: justify;
+    hyphens: auto;
+    word-wrap: break-word;
 }
 
 #trial-content {
-    margin-top: 20px;
-    margin-bottom: 20px;
-    display: flex; /* Usar flex para organizar el contenido */
-    flex-direction: column; /* Apilar elementos verticalmente */
-    align-items: center; /* Centrar elementos horizontalmente */
-    gap: 15px; /* Espacio entre elementos */
-    width: 100%; /* Asegurar que ocupe el ancho completo */
-}
-
-#trial-content input {
-    max-width: 300px; /* Limitar el ancho del input de texto */
-}
-
-
-.text-options-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 100%;
-    max-width: 300px; /* Ancho máximo para los botones de opción múltiple */
-    margin: 0 auto; /* Centrar el contenedor */
-}
-
-.text-option {
-    background-color: #03A9F4; /* Azul para opciones */
-}
-
-.text-option:hover {
-    background-color: color-mix(in srgb, #03A9F4 90%, black var(--button-hover-darken));
-}
-
-.text-option.selected {
-    background-color: var(--primary-color); /* Verde cuando está seleccionada */
-    border: 2px solid var(--secondary-color);
-}
-
-/* Ordering Trial */
-.ordering-container {
-    list-style: none;
-    padding: 0;
-    margin: 20px auto;
-    width: 100%;
-    max-width: 300px;
-    border: 1px dashed #ccc;
+    background: var(--background);
+    padding: 20px;
     border-radius: var(--border-radius);
-    min-height: 100px; /* Para que sea visible si está vacío */
+    width: 100%;
+    margin-bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    background-color: #f9f9f9;
+    align-items: center;
+    gap: 15px;
 }
 
-.ordering-item {
-    background-color: var(--card-background);
-    border: 1px solid #ddd;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: grab;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+#trial-content input[type="text"],
+#trial-content input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    font-size: 1em;
+    color: var(--text-primary);
     text-align: center;
 }
 
-.ordering-item:hover {
-    background-color: #e9e9e9;
+#trial-content .text-option {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    background: var(--surface);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+#trial-content .text-option:hover {
+    background: #f0f0f0;
+}
+
+#trial-content .text-option.selected {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-dark);
+}
+
+/* Estilos para el drag and drop de ordenación */
+.ordering-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ordering-item {
+    background: var(--surface);
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    cursor: grab;
+    transition: background-color 0.2s;
+    text-align: center;
+    position: relative; /* Necesario para los bordes de arrastre */
 }
 
 .ordering-item:active {
     cursor: grabbing;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    transform: translateY(-2px);
+}
+
+.ordering-item.dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--primary-color);
+}
+
+.ordering-item.drag-over {
+    background-color: #ffe0b2; /* Un tono más claro de naranja */
 }
 
 
-/* Hint Modal */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
+.trial-actions {
+    display: flex;
+    gap: 15px;
     width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    justify-content: center; /* Centrar los botones */
+    margin-top: 20px;
+    flex-wrap: wrap; /* Permite que los botones se envuelvan en pantallas pequeñas */
+}
+
+/* Botones de "Volver al Listado" */
+#back-to-list-from-nav-btn, #back-to-list-from-trial-btn {
+    margin-top: 20px;
+}
+
+/* Alertas de la aplicación */
+#app-alert {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--text-primary);
+    color: white;
+    padding: 15px 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 10001;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    max-width: 90%;
+    text-align: center;
+}
+
+#app-alert.show {
+    opacity: 1;
+}
+
+#app-alert.success {
+    background-color: var(--success-color);
+}
+
+#app-alert.error {
+    background-color: var(--error-color);
+}
+
+/* Modal del Escáner QR */
+#qr-scanner-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 100;
+    z-index: 10004;
+    /* Añadir esta línea para ocultarlo permanentemente */
+    display: none !important;
+}
+#qr-reader {
+    width: 100%;
+    max-width: 400px; /* Tamaño máximo del lector QR */
+    background: white; /* Fondo blanco para el lector */
+    border-radius: var(--border-radius);
+    overflow: hidden;
 }
 
-.modal-content {
-    background-color: var(--card-background);
+#qr-scanner-modal button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+}
+
+/* Modal de Pista */
+#hint-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10003;
+    padding: 20px;
+    /* Añadir esta línea para ocultarlo permanentemente */
+    display: none !important;
+
+}.hint-content {
+    background: var(--surface);
     padding: 30px;
     border-radius: var(--border-radius);
-    max-width: 400px;
-    width: 90%;
+    box-shadow: var(--shadow-lg);
     text-align: center;
-    box-shadow: var(--box-shadow);
-    position: relative;
-}
-
-.modal-content h3 {
-    margin-top: 0;
-    color: var(--primary-color);
-}
-
-.modal-content p {
-    margin-bottom: 20px;
-}
-
-.modal-content .close-button {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    font-size: 1.5em;
-    cursor: pointer;
-    color: #888;
-}
-
-/* QR Scanner */
-#qr-reader-container {
-    width: 100%; /* El contenedor del escáner puede ser más grande */
     max-width: 400px;
-    margin: 0 auto;
 }
 
-#qr-reader {
-    width: 100% !important; /* Forzar el ancho del elemento de la librería */
-}
-
-
-/* Game Over Screen */
-#game-over-screen {
-    text-align: center;
-    justify-content: center;
-}
-
-#game-over-screen h2 {
-    color: var(--primary-color);
-    margin-bottom: 10px;
-}
-
-#game-over-screen p {
-    font-size: 1.1em;
-    margin-bottom: 10px;
-}
-
+/* ======== PANTALLA DE FIN DE JUEGO ======== */
 #final-ranking-container {
-    margin-top: 30px;
-    text-align: left;
-    background-color: #f0f0f0;
-    padding: 20px;
+    margin-top: 20px;
+    background: var(--background);
+    padding: 10px;
     border-radius: var(--border-radius);
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
 }
-
-#final-ranking-container h3 {
-    text-align: center;
-    color: var(--primary-color);
-    margin-top: 0;
-    margin-bottom: 15px;
-}
-
 .ranking-item {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px dashed #ddd;
-    font-size: 1em;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
 }
-
 .ranking-item:last-child {
     border-bottom: none;
 }
-
-.ranking-item.current-team {
+.ranking-item span:first-child {
     font-weight: bold;
-    color: var(--primary-color);
-    background-color: #e6ffe6; /* Un fondo sutil para el equipo actual */
-    padding: 8px;
-    margin: -8px; /* Para que el padding no afecte el alineamiento general */
-    border-radius: 5px;
 }
-
-/* Utilities */
-.text-center {
-    text-align: center;
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* Media Queries para responsividad */
-@media (max-width: 768px) {
-    #app-container {
-        margin: 10px;
-        padding: 15px;
-        max-width: 100%;
-        min-height: calc(100vh - 20px);
-    }
-
-    .action-button,
-    input[type="text"],
-    input[type="number"],
-    .text-options-container,
-    .ordering-container {
-        width: 100%;
-        max-width: none; /* Eliminar max-width en pantallas pequeñas */
-    }
-
-    #game-header {
-        flex-direction: column;
-        gap: 10px;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
-    }
-
-    .header-item {
-        font-size: 0.9em;
-    }
-
-    .modal-content {
-        padding: 20px;
-    }
-
-    #list-view .action-button {
-        width: 100%; /* Ocupar todo el ancho en móviles */
-    }
+.ranking-item span:last-child {
+    color: var(--text-secondary);
 }
