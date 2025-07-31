@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Búsqueda del Tesoro</title>
+
+    <meta name="theme-color" content="#ff9800"/>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <link rel="stylesheet" href="player-styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+</head>
+<body>
+
+    <header id="game-header" class="hidden">
+        <div id="team-info">
+            <span id="team-name-display"></span>
+        </div>
+        <div id="game-stats">
+            <div class="stat-item">
+                <span class="stat-label">Puntos</span>
+                <span id="score-display">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Tiempo Total</span>
+                <span id="total-timer-display">00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-container">
+
+        <section id="loading-screen" class="screen">
+            <div class="loading-spinner"></div>
+            <p>Cargando Aventura...</p>
+        </section>
+
+        <section id="welcome-screen" class="screen hidden">
+            <h1>Aventuras Disponibles</h1>
+            <div id="game-list-container">
+                <p>Buscando juegos activos...</p>
+            </div>
+        </section>
+
+        <section id="game-detail-screen" class="screen hidden">
+            <div class="content-box">
+                <h2 id="game-detail-title"></h2>
+                <h3>Mecánica</h3>
+                <p id="game-detail-mechanics"></p>
+            </div>
+            <div id="start-form-container">
+                <input type="text" id="team-name-input" placeholder="Nombre de tu equipo" required>
+                <button id="start-game-btn" class="action-button">¡Comenzar Aventura!</button>
+                <button id="back-to-welcome-btn" class="secondary-button">Elegir otra aventura</button>
+            </div>
+        </section>
+
+        <section id="game-play-screen" class="screen hidden">
+
+            <div id="narrative-view" class="game-view hidden">
+                <div class="content-box narrative-box">
+                    <img id="narrative-image" src="" alt="Imagen de la narrativa" class="hidden">
+                    <audio id="narrative-audio" src=""></audio>
+                    <p id="narrative-text"></p>
+                    <button id="narrative-continue-btn" class="action-button">Continuar</button>
+                </div>
+            </div>
+
+            <div id="location-navigation-view" class="game-view hidden">
+                <div class="content-box">
+                    <h2 id="nav-location-name"></h2>
+                    <img id="nav-location-image" class="narrative-image hidden" alt="Location Image">
+                    <audio id="nav-location-audio" preload="auto"></audio>
+                    <p id="nav-pre-arrival-narrative"></p>
+                </div>
+                <div id="location-map" class="map-container"></div>
+                <p id="distance-info">Calculando distancia...</p>
+                <div class="arrival-status">
+                    <div id="arrival-progress-bar"></div>
+                    <span>Acércate al objetivo para desbloquear la ubicación...</span>
+                </div>
+                <button id="back-to-list-from-nav-btn" class="secondary-button hidden">Volver a Ubicaciones</button>
+            </div>
+
+            <div id="list-view" class="game-view hidden">
+                <h2 id="list-title"></h2>
+                <div id="list-items-container"></div>
+            </div>
+
+            <div id="trial-view" class="game-view hidden">
+                <div class="content-box">
+                    <div id="trial-header">
+                        <div id="trial-timer-display" class="trial-timer">00:00</div>
+                    </div>
+                    <img id="trial-image" src="" alt="Imagen de la prueba" class="hidden">
+                    <audio id="trial-audio" src=""></audio>
+                    <p id="trial-narrative"></p>
+                </div>
+
+                <div id="trial-content"></div>
+
+                <div class="trial-actions">
+                    <button id="hint-btn" class="hint-button">Pedir Pista (-<span id="hint-cost-display">10</span> pts)</button>
+                    <button id="validate-answer-btn" class="action-button">Validar</button>
+                </div>
+                <button id="back-to-list-from-trial-btn" class="secondary-button hidden">Volver a Pruebas</button>
+            </div>
+
+        </section>
+
+        <section id="game-over-screen" class="screen hidden">
+            <div class="content-box">
+                <h2>¡Aventura Completada!</h2>
+                <p>¡Enhorabuena, <span id="final-team-name"></span>!</p>
+                <div class="final-stats">
+                    <p><strong>Puntuación Final:</strong> <span id="final-score"></span></p>
+                    <p><strong>Tiempo Total:</strong> <span id="final-time"></span></p>
+                </div>
+                <h3>Ranking del Juego</h3>
+                <div id="final-ranking-container"></div>
+                <button id="play-again-btn" class="action-button">Jugar de Nuevo</button>
+            </div>
+        </section>
+    </main>
+
+    <div id="app-alert" class="hidden"></div>
+    <div id="qr-scanner-modal" class="hidden">
+        <div id="qr-reader"></div>
+        <button id="close-qr-scanner-btn">Cerrar Escáner</button>
+    </div>
+    <div id="hint-modal" class="hidden">
+        <div class="hint-content">
+            <h3>Pista</h3>
+            <p id="hint-text"></p>
+            <button id="close-hint-btn">Entendido</button>
+        </div>
+    </div>
+
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="player-supabase-config.js"></script>
+    <script src="player-script.js"></script>
+</body>
+</html>
