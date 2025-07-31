@@ -396,7 +396,7 @@ function renderCurrentState() {
     // Si aún no hemos empezado la primera ubicación (narrativa inicial del juego)
     if (locIndex === -1) {
         // Mostrar la narrativa inicial del juego y luego avanzar a la primera ubicación/selección de ubicación
-        showNarrativeView(game.initial_narrative, null, null, advanceToNextLocation);
+        showNarrativeView(game.initial_narrative, game.initial_image_url, game.initial_audio_url, advanceToNextLocation);
         return;
     }
 
@@ -749,7 +749,7 @@ function renderTextTrial(trial) {
                     document.querySelectorAll('.text-option').forEach(el => el.classList.remove('selected'));
                     optionDiv.classList.add('selected');
                 };
-                optionsContainer.appendChild(optionDiv);
+                optionsContainer.appendChild(optionsContainer);
             });
             UIElements.trialContent.appendChild(optionsContainer);
             break;
