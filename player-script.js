@@ -122,7 +122,7 @@ async function initWelcomeScreen() {
     try {
         const { data, error } = await supabase
             .from('games')
-            .select('id, title, description, mechanics, initial_narrative, adventure_type, initial_score_per_trial')
+            .select('id, title, description, mechanics, initial_narrative, adventure_type, initial_score_per_trial, image_url, audio_url') // Added image_url and audio_url
             .eq('is_active', true)
             .order('created_at', { ascending: false });
 
@@ -136,7 +136,11 @@ async function initWelcomeScreen() {
                 const card = document.createElement('div');
                 card.className = 'game-card';
                 // La descripción se muestra en la tarjeta de la lista de juegos
-                card.innerHTML = `<h2>${game.title}</h2><p>${game.description}</p>`;
+                card.innerHTML = `
+                    ${game.image_url ? `<img src="${game.image_url}" alt="Miniatura del juego" class="game-thumbnail">` : ''}
+                    <h2>${game.title}</h2>
+                    <p>${game.description}</p>
+                `;
                 card.onclick = () => showGameDetails(game);
                 UIElements.gameListContainer.appendChild(card);
             });
@@ -396,7 +400,7 @@ function renderCurrentState() {
     // Si aún no hemos empezado la primera ubicación (narrativa inicial del juego)
     if (locIndex === -1) {
         // Mostrar la narrativa inicial del juego y luego avanzar a la primera ubicación/selección de ubicación
-        showNarrativeView(game.initial_narrative, game.initial_image_url, game.initial_audio_url, advanceToNextLocation);
+        showNarrativeView(game.initial_narrative, game.image_url, game.audio_url, advanceToNextLocation); // Pass game.image_url and game.audio_url
         return;
     }
 
@@ -535,6 +539,8 @@ function advanceToNextTrial() {
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     console.log("showNarrativeView() llamada."); // AÑADIDO PARA DEPURACIÓN
+    console.log("Image URL:", imageUrl); // Añade esto para depurar la URL que llega
+    console.log("Audio URL:", audioUrl); // Añade esto para depurar la URL que llega
     UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
 
     UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
@@ -749,7 +755,7 @@ function renderTextTrial(trial) {
                     document.querySelectorAll('.text-option').forEach(el => el.classList.remove('selected'));
                     optionDiv.classList.add('selected');
                 };
-                optionsContainer.appendChild(optionsContainer);
+                optionsContainer.appendChild(optionDiv); // Corrected: appending optionDiv, not optionsContainer
             });
             UIElements.trialContent.appendChild(optionsContainer);
             break;

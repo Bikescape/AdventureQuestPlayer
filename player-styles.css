@@ -167,6 +167,7 @@ body {
 
 /* Estilos para imágenes de narrativa y prueba */
 .narrative-image, #trial-image {
+    width: 100%; /* Added to ensure it takes full width of its container */
     max-width: 100%; /* Asegura que la imagen no exceda el ancho de su contenedor */
     height: auto; /* Mantiene la proporción de la imagen */
     display: block; /* Elimina espacio extra inferior y permite margin auto */
@@ -219,6 +220,9 @@ body {
     cursor: pointer;
     transition: var(--transition);
     text-align: left;
+    display: flex; /* Added for thumbnail layout */
+    align-items: center; /* Added for thumbnail layout */
+    gap: 15px; /* Space between thumbnail and text */
 }
 
 .game-card:hover {
@@ -228,7 +232,7 @@ body {
 
 .game-card h2 {
     color: var(--text-primary);
-    margin-bottom: 10px;
+    margin-bottom: 5px; /* Adjusted for better spacing with thumbnail */
     font-size: 1.5em;
 }
 
@@ -237,6 +241,18 @@ body {
     font-size: 0.95em;
 }
 
+.game-thumbnail { /* Added style for game thumbnail */
+    max-width: 80px; /* Maximum width for thumbnail */
+    max-height: 80px; /* Maximum height for thumbnail */
+    width: 100%; /* Make it responsive to its container */
+    height: auto; /* Maintain aspect ratio */
+    object-fit: cover; /* Ensures image covers the area */
+    border-radius: var(--border-radius); /* Rounded corners */
+    flex-shrink: 0; /* Prevents shrinking */
+    box-shadow: var(--shadow);
+}
+
+
 /* ======== PANTALLA DE DETALLE DE JUEGO ======== */
 #game-detail-screen h2 {
     color: var(--primary-color);
@@ -244,12 +260,13 @@ body {
     font-size: 1.8em;
 }
 
-#game-detail-screen h3 {
+/* Removed h3 for "Mecánica" */
+/* #game-detail-screen h3 {
     color: var(--text-primary);
     margin-top: 20px;
     margin-bottom: 10px;
     font-size: 1.2em;
-}
+} */
 
 #start-form-container {
     display: flex;
