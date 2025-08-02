@@ -166,7 +166,7 @@ body {
 }
 
 /* Estilos para imágenes de narrativa y prueba */
-.narrative-image, #trial-image {
+    .narrative-image, #trial-image, #nav-location-image { /* Incluido #nav-location-image explícitamente */
     width: 100%; /* Asegura que la imagen tome el 100% del ancho de su contenedor */
     max-width: 100%; /* Asegura que la imagen no exceda el ancho de su contenedor */
     height: auto; /* Mantiene la proporción de la imagen */
