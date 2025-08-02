@@ -167,13 +167,14 @@ body {
 
 /* Estilos para imágenes de narrativa y prueba */
 .narrative-image, #trial-image {
-    width: 100%; /* Added to ensure it takes full width of its container */
+    width: 100%; /* Asegura que la imagen tome el 100% del ancho de su contenedor */
     max-width: 100%; /* Asegura que la imagen no exceda el ancho de su contenedor */
     height: auto; /* Mantiene la proporción de la imagen */
     display: block; /* Elimina espacio extra inferior y permite margin auto */
-    margin: 10px auto; /* Centra la imagen y da espacio vertical */
+    margin: 10px auto 20px auto; /* Centra la imagen y da más espacio inferior */
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
+    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
 }
 
 /* ======== PANTALLA DE CARGA ======== */
@@ -219,10 +220,12 @@ body {
     box-shadow: var(--shadow);
     cursor: pointer;
     transition: var(--transition);
-    text-align: left;
-    display: flex; /* Added for thumbnail layout */
-    align-items: center; /* Added for thumbnail layout */
-    gap: 15px; /* Space between thumbnail and text */
+    /* Cambiado a disposición vertical */
+    display: flex;
+    flex-direction: column; /* Apila los elementos verticalmente */
+    align-items: center; /* Centra horizontalmente los elementos dentro de la tarjeta */
+    gap: 10px; /* Espacio entre la miniatura y el texto */
+    text-align: center; /* Centra el texto de la tarjeta */
 }
 
 .game-card:hover {
@@ -232,7 +235,7 @@ body {
 
 .game-card h2 {
     color: var(--text-primary);
-    margin-bottom: 5px; /* Adjusted for better spacing with thumbnail */
+    margin-bottom: 5px; /* Ajustado para mejor espaciado vertical */
     font-size: 1.5em;
 }
 
@@ -241,15 +244,15 @@ body {
     font-size: 0.95em;
 }
 
-.game-thumbnail { /* Added style for game thumbnail */
-    max-width: 80px; /* Maximum width for thumbnail */
-    max-height: 80px; /* Maximum height for thumbnail */
-    width: 100%; /* Make it responsive to its container */
-    height: auto; /* Maintain aspect ratio */
-    object-fit: cover; /* Ensures image covers the area */
-    border-radius: var(--border-radius); /* Rounded corners */
-    flex-shrink: 0; /* Prevents shrinking */
+.game-thumbnail { /* Estilo para la miniatura del juego */
+    /* Eliminadas las restricciones de tamaño fijo para que ocupe el 50% del ancho de la tarjeta */
+    width: 50%; /* Hace que sea responsiva a su contenedor */
+    height: auto; /* Mantiene la relación de aspecto */
+    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
+    border-radius: var(--border-radius); /* Bordes redondeados */
+    flex-shrink: 0; /* Evita que se encoja */
     box-shadow: var(--shadow);
+    margin-bottom: 10px; /* Margen inferior para separar del texto */
 }
 
 
