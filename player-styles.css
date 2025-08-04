@@ -165,16 +165,31 @@ body {
     background: #0288d1;
 }
 
-/* Estilos para imágenes de narrativa y prueba */
-    .narrative-image, #trial-image, #nav-location-image { /* Incluido #nav-location-image explícitamente */
-    width: 100%; /* Asegura que la imagen tome el 100% del ancho de su contenedor */
-    max-width: 100%; /* Asegura que la imagen no exceda el ancho de su contenedor */
-    height: auto; /* Mantiene la proporción de la imagen */
+/* ======== ESTILOS PARA IMÁGENES ======== */
+/* Regla general para todas las imágenes dentro del contenido */
+.content-box img,
+.narrative-box img,
+#narrative-text img,
+.narrative-image,
+#trial-image,
+#nav-location-image {
+    width: 100% !important; /* Fuerza que ocupe el 100% del ancho del contenedor */
+    max-width: 100% !important; /* Asegura que no exceda el ancho del contenedor */
+    height: auto !important; /* Mantiene la proporción de la imagen */
     display: block; /* Elimina espacio extra inferior y permite margin auto */
-    margin: 10px auto 20px auto; /* Centra la imagen y da más espacio inferior */
+    margin: 10px auto 20px auto; /* Centra la imagen y da espacio */
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
     object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
+    box-sizing: border-box; /* Incluye padding y border en el cálculo del ancho */
+}
+
+/* Específicamente para imágenes de narrativa */
+.narrative-image {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 15px auto 25px auto !important; /* Más espacio para narrativa */
 }
 
 /* ======== PANTALLA DE CARGA ======== */
