@@ -1,3 +1,6 @@
+## Player-script.js
+
+```javascript
 // player/player-script.js
 
 // Estado global del juego
@@ -1073,6 +1076,9 @@ async function loadFinalRanking() {
 // =================================================================
 
 function playArrivalSound() {
+    // Reemplazar la implementación de audio actual con una que use un sonido de alerta más fuerte y estridente.
+    // Esto se logra creando un nuevo AudioContext y un oscilador con un tipo de onda 'sawtooth' y una frecuencia más alta para un sonido más penetrante.
+    // Además, se ajusta la ganancia para que sea más notable.
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         if (audioContext.state === 'suspended') {
@@ -1084,18 +1090,18 @@ function playArrivalSound() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // Tono C5
-        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.5);
-
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // Tono La5 más alto
+        gainNode.gain.setValueAtTime(1, audioContext.currentTime); // Ganancia al máximo
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3); // Decay rápido
 
         oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
+        oscillator.stop(audioContext.currentTime + 0.3);
     } catch (e) {
         console.error("No se pudo reproducir el sonido de llegada:", e);
     }
 }
+
 
 function getCurrentTrial() {
     if (gameState.currentLocationIndex === -1 || gameState.currentTrialIndex === -1) return null;
@@ -1145,3 +1151,23 @@ function showAlert(message, type = 'info') {
         setTimeout(() => alertDiv.remove(), 500);
     }, 3000);
 }
+
+/**
+ * Avanza a la siguiente prueba en la ubicación actual (solo para juegos/pruebas lineales).
+ */
+function advanceToNextTrial() {
+    gameState.currentTrialIndex++;
+    const location = getCurrentLocation();
+
+    if (gameState.currentTrialIndex >= location.trials.length) {
+        advanceToNextLocation();
+    } else {
+        // CORRECCIÓN: Para pruebas lineales, también mostramos la narrativa antes de la prueba.
+        const trial = location.trials[gameState.currentTrialIndex];
+        saveState();
+        showNarrativeView(trial.narrative, trial.image_url, trial.audio_url, () => {
+            renderTrial(trial);
+        });
+    }
+}
+```
