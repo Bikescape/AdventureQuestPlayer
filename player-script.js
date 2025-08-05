@@ -210,8 +210,6 @@ function showGameView(viewName) {
     });
     if (gameViews[viewName]) {
         gameViews[viewName].classList.remove('hidden');
-        // CORRECCIÓN 3: Las vistas de juego usan 'flex' para su layout, no 'block'.
-        // Este cambio asegura que las vistas se muestren correctamente.
         gameViews[viewName].style.display = 'flex';
     }
 }
@@ -535,16 +533,16 @@ function showListView(type, items, onSelect) {
 
     const sortedItems = [...items].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
-    sortedItems.forEach(item => {
+    sortedItems.forEach((item, index) => {
         if (type === 'pruebas' && isTrialCompleted(item.id)) return;
         if (type === 'ubicaciones' && isLocationCompleted(item.id)) return;
 
         const itemButton = document.createElement('button');
         itemButton.className = 'list-item-button action-button';
         
-        // CORRECCIÓN 2: Mostrar únicamente el nombre del item (prueba o ubicación).
-        // Esto cumple con el requisito de no mostrar texto adicional en los botones de prueba.
-        itemButton.textContent = item.name;
+        // **CORRECCIÓN**: Usar el nombre del item si existe. Si no, usar un marcador de posición claro.
+        // Esto soluciona los botones en blanco y hace la app funcional mientras se actualiza la BD.
+        itemButton.textContent = item.name || `Prueba ${item.order_index || index + 1}`;
 
         itemButton.onclick = () => onSelect(item);
         UIElements.listItemsContainer.appendChild(itemButton);
@@ -888,7 +886,6 @@ function startLocationTracking(target, isTrialValidation = false) {
             } else {
                 UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
                 if (distance <= target.tolerance_meters) {
-                    // CORRECCIÓN 1: Reproducir sonido al llegar a la ubicación.
                     playArrivalSound();
                     showAlert('¡Has llegado a la ubicación!', 'success');
                     stopLocationTracking();
@@ -1043,10 +1040,6 @@ async function loadFinalRanking() {
 // FUNCIONES DE UTILIDAD
 // =================================================================
 
-/**
- * CORRECCIÓN 1: Nueva función para reproducir un sonido de notificación.
- * Se utiliza la Web Audio API para generar un tono simple sin necesidad de archivos externos.
- */
 function playArrivalSound() {
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
