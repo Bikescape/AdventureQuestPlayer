@@ -203,7 +203,7 @@ function showScreen(screenName) {
 function showGameView(viewName) {
     console.log(`Mostrando vista de juego: ${viewName}`);
 
-    // **CORRECCIÓN**: Detener audios de otras vistas para evitar solapamientos.
+    // Detener audios de otras vistas para evitar solapamientos.
     if (viewName !== 'locationNav' && UIElements.navLocationAudio.src && !UIElements.navLocationAudio.paused) {
         UIElements.navLocationAudio.pause();
         UIElements.navLocationAudio.currentTime = 0;
@@ -380,6 +380,7 @@ function renderCurrentState() {
     }
 
     if (locIndex === -1) {
+        // Muestra la narrativa inicial del juego
         showNarrativeView(game.initial_narrative, game.image_url, game.audio_url, advanceToNextLocation);
         return;
     }
@@ -388,25 +389,24 @@ function renderCurrentState() {
     const trialIndex = gameState.currentTrialIndex;
 
     if (trialIndex === -1) {
+        // Muestra la narrativa inicial de la ubicación
         showNarrativeView(location.initial_narrative, location.image_url, location.audio_url, startLocationTrials);
         return;
     }
 
-    // El flujo para iniciar una prueba ahora se maneja en otros lugares.
-    // Esta parte es ahora un fallback, principalmente para cuando se recarga la página
-    // en medio de una prueba.
+    // Si ya estamos en una prueba (currentTrialIndex no es -1) y no está completada
     const trial = location.trials[trialIndex];
-
-    if (isTrialCompleted(trial.id)) {
-        if (location.is_selectable_trials) {
-            startLocationTrials();
-        } else {
-            advanceToNextTrial();
-        }
+    if (!isTrialCompleted(trial.id)) {
+        renderTrial(trial); // Renderiza la prueba directamente con su narrativa
         return;
     }
     
-    renderTrial(trial);
+    // Si la prueba ya está completada, avanza
+    if (location.is_selectable_trials) {
+        startLocationTrials(); // Vuelve a la lista de pruebas seleccionables si es el caso
+    } else {
+        advanceToNextTrial(); // Avanza a la siguiente prueba lineal
+    }
 }
 
 
@@ -419,7 +419,7 @@ function advanceToNextLocation() {
 
     if (game.adventure_type === 'linear') {
         gameState.currentLocationIndex++;
-        gameState.currentTrialIndex = -1;
+        gameState.currentTrialIndex = -1; // Reinicia el índice de prueba para la nueva ubicación
 
         if (gameState.currentLocationIndex >= game.locations.length) {
             gameState.isCompleted = true;
@@ -434,7 +434,7 @@ function advanceToNextLocation() {
         if (uncompletedLocations.length > 0) {
             showListView('ubicaciones', uncompletedLocations, (selectedLoc) => {
                 gameState.currentLocationIndex = game.locations.findIndex(l => l.id === selectedLoc.id);
-                gameState.currentTrialIndex = -1;
+                gameState.currentTrialIndex = -1; // Reinicia el índice de prueba para la nueva ubicación
                 showLocationNavigationView(selectedLoc);
             });
         } else {
@@ -463,8 +463,7 @@ function startLocationTrials() {
             gameState.currentTrialIndex = trialIndex;
             saveState();
             
-            // Llamar a renderCurrentState en lugar de renderTrial directamente
-            // para asegurar que el estado se procese correctamente
+            // Llamar a renderTrial con un pequeño delay para asegurar que el estado se guarde correctamente
             setTimeout(() => {
                 renderTrial(trial);
             }, 50);
@@ -479,25 +478,22 @@ function startLocationTrials() {
         advanceToNextTrial();
     }
 }
+
 /**
  * Avanza a la siguiente prueba en la ubicación actual (solo para juegos/pruebas lineales).
  */
 function advanceToNextTrial() {
     const location = getCurrentLocation();
 
-    // Si ya estamos en una prueba y se ha completado, o si es la primera prueba de una ubicación lineal
-    // y venimos de la narrativa inicial de la ubicación (currentTrialIndex === 0).
-    // Si currentTrialIndex es -1, significa que acabamos de entrar a una nueva ubicación y estamos en su narrativa inicial.
-    // En ese caso, la primera prueba es la 0.
+    // Incrementa el índice para obtener la siguiente prueba
+    // Si currentTrialIndex ya está en el último, advanceToNextLocation se encargará de ello.
     if (gameState.currentTrialIndex < location.trials.length) {
         const trial = location.trials[gameState.currentTrialIndex];
         saveState();
-        showNarrativeView(trial.narrative, trial.image_url, trial.audio_url, () => {
-            renderTrial(trial);
-        });
-        gameState.currentTrialIndex++; // Incrementa para la próxima vez que se llame
+        renderTrial(trial); // Renderiza la prueba directamente con su narrativa
+        gameState.currentTrialIndex++; // Prepara el índice para la próxima llamada
     } else {
-        // Si ya no hay más pruebas en la ubicación actual, avanzamos a la siguiente ubicación.
+        // Si no hay más pruebas en la ubicación actual, avanza a la siguiente ubicación.
         advanceToNextLocation();
     }
 }
@@ -509,6 +505,7 @@ function advanceToNextTrial() {
 
 /**
  * Muestra una pantalla de narrativa.
+ * Esta función ahora se usa solo para la narrativa inicial del juego y de las ubicaciones.
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
@@ -517,7 +514,7 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     UIElements.narrativeAudio.src = audioUrl || '';
     if (audioUrl) UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser."));
 
-    // **CORRECCIÓN**: Clonar el botón para eliminar listeners anteriores y adjuntar el nuevo.
+    // Clonar el botón para eliminar listeners anteriores y adjuntar el nuevo.
     const newContinueBtn = buttons.narrativeContinue.cloneNode(true);
     buttons.narrativeContinue.parentNode.replaceChild(newContinueBtn, buttons.narrativeContinue);
     buttons.narrativeContinue = newContinueBtn;
@@ -606,7 +603,7 @@ function showListView(type, items, onSelect) {
  */
 function renderTrial(trial) {
     console.log("Rendering trial:", trial);
-    UIElements.trialNarrative.innerHTML = trial.narrative;
+    UIElements.trialNarrative.innerHTML = trial.narrative; // La narrativa se muestra aquí
     UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
     UIElements.trialImage.src = trial.image_url || '';
     UIElements.trialAudio.src = trial.audio_url || '';
@@ -616,7 +613,7 @@ function renderTrial(trial) {
     const hintsUsed = getHintsUsedForTrial(trial.id);
     UIElements.hintBtn.disabled = hintsUsed >= trial.hint_count;
 
-    renderTrialContent(trial);
+    renderTrialContent(trial); // Esto renderiza la pregunta
     startTrialTimer();
     showGameView('trial');
 
@@ -781,8 +778,6 @@ function processAnswer(isCorrect) {
             if (location.is_selectable_trials) {
                 startLocationTrials();
             } else {
-                // **CORRECCIÓN**: Si es lineal, avanzamos a la siguiente prueba.
-                // La función advanceToNextTrial ya maneja la lógica de mostrar la narrativa y luego la prueba.
                 advanceToNextTrial();
             }
         }, 1500);
