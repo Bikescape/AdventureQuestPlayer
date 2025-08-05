@@ -202,6 +202,21 @@ function showScreen(screenName) {
  */
 function showGameView(viewName) {
     console.log(`Mostrando vista de juego: ${viewName}`);
+
+    // **CORRECCIÓN**: Detener audios de otras vistas para evitar solapamientos.
+    if (viewName !== 'locationNav' && UIElements.navLocationAudio.src && !UIElements.navLocationAudio.paused) {
+        UIElements.navLocationAudio.pause();
+        UIElements.navLocationAudio.currentTime = 0;
+    }
+    if (viewName !== 'narrative' && UIElements.narrativeAudio.src && !UIElements.narrativeAudio.paused) {
+        UIElements.narrativeAudio.pause();
+        UIElements.narrativeAudio.currentTime = 0;
+    }
+    if (viewName !== 'trial' && UIElements.trialAudio.src && !UIElements.trialAudio.paused) {
+        UIElements.trialAudio.pause();
+        UIElements.trialAudio.currentTime = 0;
+    }
+
     Object.keys(gameViews).forEach(key => {
         if (gameViews[key]) {
             gameViews[key].classList.add('hidden');
@@ -377,6 +392,9 @@ function renderCurrentState() {
         return;
     }
 
+    // El flujo para iniciar una prueba ahora se maneja en otros lugares.
+    // Esta parte es ahora un fallback, principalmente para cuando se recarga la página
+    // en medio de una prueba.
     const trial = location.trials[trialIndex];
 
     if (isTrialCompleted(trial.id)) {
@@ -387,7 +405,7 @@ function renderCurrentState() {
         }
         return;
     }
-
+    
     renderTrial(trial);
 }
 
@@ -431,14 +449,27 @@ function advanceToNextLocation() {
  */
 function startLocationTrials() {
     stopLocationTracking();
-    const location = gameState.gameData.locations[gameState.currentLocationIndex];
+    const location = getCurrentLocation();
 
     if (location.is_selectable_trials) {
+        // **CORRECCIÓN**: Para pruebas seleccionables, mostramos la lista.
+        // El callback de la lista se encargará de mostrar la narrativa de la prueba elegida.
         showListView('pruebas', location.trials, (trial) => {
-            gameState.currentTrialIndex = location.trials.findIndex(t => t.id === trial.id);
-            renderCurrentState();
+            const trialIndex = location.trials.findIndex(t => t.id === trial.id);
+            if (trialIndex === -1) {
+                showAlert("Error al procesar la prueba.", 'error');
+                return;
+            }
+            gameState.currentTrialIndex = trialIndex;
+            saveState();
+
+            // Mostrar la narrativa de la prueba. El botón "Continuar" llamará a renderTrial.
+            showNarrativeView(trial.narrative, trial.image_url, trial.audio_url, () => {
+                renderTrial(trial);
+            });
         });
     } else {
+        // Para pruebas lineales, avanzamos directamente.
         advanceToNextTrial();
     }
 }
@@ -448,12 +479,17 @@ function startLocationTrials() {
  */
 function advanceToNextTrial() {
     gameState.currentTrialIndex++;
-    const location = gameState.gameData.locations[gameState.currentLocationIndex];
+    const location = getCurrentLocation();
 
     if (gameState.currentTrialIndex >= location.trials.length) {
         advanceToNextLocation();
     } else {
-        renderCurrentState();
+        // **CORRECCIÓN**: Para pruebas lineales, también mostramos la narrativa antes de la prueba.
+        const trial = location.trials[gameState.currentTrialIndex];
+        saveState();
+        showNarrativeView(trial.narrative, trial.image_url, trial.audio_url, () => {
+            renderTrial(trial);
+        });
     }
 }
 
@@ -539,11 +575,7 @@ function showListView(type, items, onSelect) {
 
         const itemButton = document.createElement('button');
         itemButton.className = 'list-item-button action-button';
-        
-        // **CORRECCIÓN**: Usar el nombre del item si existe. Si no, usar un marcador de posición claro.
-        // Esto soluciona los botones en blanco y hace la app funcional mientras se actualiza la BD.
         itemButton.textContent = item.name || `Prueba ${item.order_index || index + 1}`;
-
         itemButton.onclick = () => onSelect(item);
         UIElements.listItemsContainer.appendChild(itemButton);
     });
@@ -879,7 +911,7 @@ function startLocationTracking(target, isTrialValidation = false) {
 
             if (isTrialValidation) {
                 if (distance <= target.tolerance_meters) {
-                    playArrivalSound(); // También suena al completar una prueba GPS
+                    playArrivalSound();
                     processAnswer(true);
                     stopLocationTracking();
                 }
