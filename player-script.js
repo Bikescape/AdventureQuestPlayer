@@ -1,6 +1,3 @@
-## Player-script.js
-
-```javascript
 // player/player-script.js
 
 // Estado global del juego
@@ -473,6 +470,11 @@ function startLocationTrials() {
         });
     } else {
         // Para pruebas lineales, avanzamos directamente.
+        // **CORRECCIÓN**: Asegurarse de que `currentTrialIndex` se reinicie para la nueva ubicación
+        // antes de avanzar a la siguiente prueba, si se viene de una narrativa de ubicación.
+        if (gameState.currentTrialIndex === -1) { // Si estamos en la narrativa inicial de la ubicación
+            gameState.currentTrialIndex = 0; // Iniciar con la primera prueba de la ubicación
+        }
         advanceToNextTrial();
     }
 }
@@ -481,18 +483,22 @@ function startLocationTrials() {
  * Avanza a la siguiente prueba en la ubicación actual (solo para juegos/pruebas lineales).
  */
 function advanceToNextTrial() {
-    gameState.currentTrialIndex++;
     const location = getCurrentLocation();
 
-    if (gameState.currentTrialIndex >= location.trials.length) {
-        advanceToNextLocation();
-    } else {
-        // **CORRECCIÓN**: Para pruebas lineales, también mostramos la narrativa antes de la prueba.
+    // Si ya estamos en una prueba y se ha completado, o si es la primera prueba de una ubicación lineal
+    // y venimos de la narrativa inicial de la ubicación (currentTrialIndex === 0).
+    // Si currentTrialIndex es -1, significa que acabamos de entrar a una nueva ubicación y estamos en su narrativa inicial.
+    // En ese caso, la primera prueba es la 0.
+    if (gameState.currentTrialIndex < location.trials.length) {
         const trial = location.trials[gameState.currentTrialIndex];
         saveState();
         showNarrativeView(trial.narrative, trial.image_url, trial.audio_url, () => {
             renderTrial(trial);
         });
+        gameState.currentTrialIndex++; // Incrementa para la próxima vez que se llame
+    } else {
+        // Si ya no hay más pruebas en la ubicación actual, avanzamos a la siguiente ubicación.
+        advanceToNextLocation();
     }
 }
 
@@ -511,6 +517,7 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     UIElements.narrativeAudio.src = audioUrl || '';
     if (audioUrl) UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser."));
 
+    // **CORRECCIÓN**: Clonar el botón para eliminar listeners anteriores y adjuntar el nuevo.
     const newContinueBtn = buttons.narrativeContinue.cloneNode(true);
     buttons.narrativeContinue.parentNode.replaceChild(newContinueBtn, buttons.narrativeContinue);
     buttons.narrativeContinue = newContinueBtn;
@@ -774,6 +781,8 @@ function processAnswer(isCorrect) {
             if (location.is_selectable_trials) {
                 startLocationTrials();
             } else {
+                // **CORRECCIÓN**: Si es lineal, avanzamos a la siguiente prueba.
+                // La función advanceToNextTrial ya maneja la lógica de mostrar la narrativa y luego la prueba.
                 advanceToNextTrial();
             }
         }, 1500);
@@ -1090,13 +1099,13 @@ function playArrivalSound() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // Tono La5 más alto
-        gainNode.gain.setValueAtTime(1, audioContext.currentTime); // Ganancia al máximo
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3); // Decay rápido
-
+        oscillator.type = 'sawtooth'; // Tipo de onda que produce un sonido más "áspero" o estridente
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime); // Frecuencia más alta para un tono más agudo (1000 Hz)
+        gainNode.gain.setValueAtTime(0.8, audioContext.currentTime); // Ganancia inicial más fuerte
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); // Decay rápido pero audible
+        
         oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
+        oscillator.stop(audioContext.currentTime + 0.5); // Duración del sonido
     } catch (e) {
         console.error("No se pudo reproducir el sonido de llegada:", e);
     }
@@ -1151,23 +1160,3 @@ function showAlert(message, type = 'info') {
         setTimeout(() => alertDiv.remove(), 500);
     }, 3000);
 }
-
-/**
- * Avanza a la siguiente prueba en la ubicación actual (solo para juegos/pruebas lineales).
- */
-function advanceToNextTrial() {
-    gameState.currentTrialIndex++;
-    const location = getCurrentLocation();
-
-    if (gameState.currentTrialIndex >= location.trials.length) {
-        advanceToNextLocation();
-    } else {
-        // CORRECCIÓN: Para pruebas lineales, también mostramos la narrativa antes de la prueba.
-        const trial = location.trials[gameState.currentTrialIndex];
-        saveState();
-        showNarrativeView(trial.narrative, trial.image_url, trial.audio_url, () => {
-            renderTrial(trial);
-        });
-    }
-}
-```
