@@ -322,8 +322,8 @@ body {
     color: var(--text-primary);
     margin-bottom: 20px;
     text-align: justify; /* Justifica el texto para mejor lectura */
-    hyphens: auto; /* Permite guiones automáticos para mejor ajuste */
-    word-wrap: break-word; /* Asegura que las palabras largas se rompan */
+    hyphens: auto;
+    word-wrap: break-word;
 }
 
 #narrative-audio {
@@ -469,6 +469,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    position: relative; /* Añadido para el posicionamiento absoluto de las alertas hijas */
 }
 
 #trial-content input[type="text"],
@@ -552,13 +553,13 @@ body {
 
 /* Alertas de la aplicación */
 #app-alert {
-    position: fixed;
-    bottom: 20px;
+    position: absolute; /* Cambiado de fixed a absolute para posicionamiento relativo al padre */
+    bottom: 10px; /* Posición relativa a su padre (#trial-content) */
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--text-primary);
     color: white;
-    padding: 15px 25px;
+    padding: 10px 20px; /* Padding ligeramente más pequeño para mejor ajuste */
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
     z-index: 10001;
@@ -566,10 +567,13 @@ body {
     transition: opacity 0.5s ease-in-out;
     max-width: 90%;
     text-align: center;
+    pointer-events: none; /* Permite que los clics pasen a través de la alerta cuando no está visible */
+    white-space: nowrap; /* Evita que el texto se envuelva si el mensaje es corto */
 }
 
 #app-alert.show { /* Esta clase ahora se añade en showAlert para mostrar el mensaje */
     opacity: 1;
+    pointer-events: auto; /* Reactiva los eventos de puntero cuando es visible */
 }
 
 #app-alert.success {

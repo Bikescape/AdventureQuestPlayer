@@ -855,20 +855,28 @@ function processAnswer(isCorrect) {
             hintsUsed: hintsUsed
         });
 
-        showAlert('¡Correcto!', 'success'); // Muestra mensaje de éxito
+        showAlert('¡Correcto!', 'success', UIElements.trialContent); // Pasa trialContent como padre
         syncStateWithSupabase();
 
-        const location = getCurrentLocation();
-        setTimeout(() => {
-            if (location.is_selectable_trials) {
-                startLocationTrials();
-            } else {
-                advanceToNextTrial();
-            }
-        }, 1500);
+        // Check if all trials in the current location are completed
+        const currentLocation = getCurrentLocation();
+        if (isLocationCompleted(currentLocation.id)) {
+            setTimeout(() => {
+                advanceToNextLocation(); // Move to next location if current one is complete
+            }, 1500);
+        } else {
+            // If location not complete, decide based on trial type
+            setTimeout(() => {
+                if (currentLocation.is_selectable_trials) {
+                    startLocationTrials(); // Go back to list of trials
+                } else {
+                    advanceToNextTrial(); // Go to next linear trial
+                }
+            }, 1500);
+        }
 
     } else {
-        showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error'); // Muestra mensaje de error
+        showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
         startTrialTimer(); // Reinicia el temporizador si la respuesta es incorrecta
     }
 }
@@ -1240,22 +1248,31 @@ function getHintsUsedForTrial(trialId) {
 
 /**
  * Muestra una alerta temporal al usuario.
+ * @param {string} message - El mensaje a mostrar.
+ * @param {string} type - Tipo de alerta ('info', 'success', 'error').
+ * @param {HTMLElement} [parentElement=document.body] - El elemento padre donde se añadirá la alerta.
  */
-function showAlert(message, type = 'info') {
+function showAlert(message, type = 'info', parentElement = document.body) {
     const alertDiv = document.createElement('div');
     alertDiv.className = `app-alert ${type}`;
-    document.body.appendChild(alertDiv); // Append before setting text to avoid reflow issues
-
-    // Set text content after appending to avoid potential reflows if message is long
     alertDiv.textContent = message;
 
-    // Add the 'show' class to trigger the opacity transition
+    // Append to the specified parent or fallback to body
+    parentElement.appendChild(alertDiv);
+
+    // Trigger the 'show' class for the fade-in effect
     setTimeout(() => {
         alertDiv.classList.add('show');
     }, 10);
 
+    // Set timeout to remove the alert after 3 seconds
     setTimeout(() => {
-        alertDiv.classList.remove('show'); // Remove to start fade out
-        setTimeout(() => alertDiv.remove(), 500);
+        alertDiv.classList.remove('show'); // Start fade out
+        // Remove from DOM after transition
+        const onTransitionEnd = () => {
+            alertDiv.removeEventListener('transitionend', onTransitionEnd);
+            alertDiv.remove();
+        };
+        alertDiv.addEventListener('transitionend', onTransitionEnd);
     }, 3000);
 }
