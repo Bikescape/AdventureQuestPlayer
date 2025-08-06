@@ -103,6 +103,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Asegurarse de que los modales y sus botones de cierre estén ocultos al cargar
+    if (UIElements.qrScannerModal) {
+        UIElements.qrScannerModal.style.display = 'none'; // Usar style.display directamente
+        console.log("DEBUG: QR Scanner Modal hidden on load. Display:", UIElements.qrScannerModal.style.display);
+    } else {
+        console.warn("ADVERTENCIA: Elemento #qr-scanner-modal no encontrado en el DOM.");
+    }
+    // Explicitly hide the close button for QR scanner (if it's not inside the modal)
+    if (buttons.closeQrScanner) {
+        buttons.closeQrScanner.classList.add('hidden'); // Mantener hidden si está fuera del modal
+        console.log("DEBUG: QR Scanner Close Button hidden on load:", buttons.closeQrScanner.classList.contains('hidden'));
+    } else {
+        console.warn("ADVERTENCIA: Elemento #close-qr-scanner-btn no encontrado en el DOM.");
+    }
+
+    if (UIElements.hintModal) {
+        UIElements.hintModal.style.display = 'none'; // Usar style.display directamente
+        console.log("DEBUG: Hint Modal hidden on load. Display:", UIElements.hintModal.style.display);
+    } else {
+        console.warn("ADVERTENCIA: Elemento #hint-modal no encontrado en el DOM.");
+    }
+    // Explicitly hide the close button for Hint modal (if it's not inside the modal)
+    if (buttons.closeHint) {
+        buttons.closeHint.classList.add('hidden'); // Mantener hidden si está fuera del modal
+        console.log("DEBUG: Hint Close Button hidden on load:", buttons.closeHint.classList.contains('hidden'));
+    } else {
+        console.warn("ADVERTENCIA: Elemento #close-hint-btn no encontrado en el DOM.");
+    }
+
     initWelcomeScreen();
     attachEventListeners();
 });
@@ -155,9 +184,17 @@ function attachEventListeners() {
     buttons.backToWelcome.addEventListener('click', initWelcomeScreen);
     buttons.startGame.addEventListener('click', startGame);
     UIElements.hintBtn.addEventListener('click', requestHint);
-    buttons.closeHint.addEventListener('click', () => UIElements.hintModal.classList.add('hidden'));
+    // Modificado para usar style.display directamente
+    buttons.closeHint.addEventListener('click', () => {
+        console.log("DEBUG: Botón 'Entendido' de la pista clickeado.");
+        if (UIElements.hintModal) {
+            UIElements.hintModal.style.display = 'none'; // Ocultar directamente
+            console.log("DEBUG: Modal de pista ocultado directamente. Display actual:", UIElements.hintModal.style.display);
+        }
+    });
     buttons.validateAnswer.addEventListener('click', validateCurrentAnswer);
-    buttons.closeQrScanner.addEventListener('click', stopQrScanner);
+    // Modificado para usar style.display directamente
+    buttons.closeQrScanner.addEventListener('click', stopQrScanner); // stopQrScanner ya maneja el display
     buttons.playAgain.addEventListener('click', () => {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
@@ -204,15 +241,15 @@ function showGameView(viewName) {
     console.log(`Mostrando vista de juego: ${viewName}`);
 
     // Detener audios de otras vistas para evitar solapamientos.
-    if (viewName !== 'locationNav' && UIElements.navLocationAudio.src && !UIElements.navLocationAudio.paused) {
+    if (UIElements.navLocationAudio && UIElements.navLocationAudio.src && !UIElements.navLocationAudio.paused) {
         UIElements.navLocationAudio.pause();
         UIElements.navLocationAudio.currentTime = 0;
     }
-    if (viewName !== 'narrative' && UIElements.narrativeAudio.src && !UIElements.narrativeAudio.paused) {
+    if (UIElements.narrativeAudio && UIElements.narrativeAudio.src && !UIElements.narrativeAudio.paused) {
         UIElements.narrativeAudio.pause();
         UIElements.narrativeAudio.currentTime = 0;
     }
-    if (viewName !== 'trial' && UIElements.trialAudio.src && !UIElements.trialAudio.paused) {
+    if (UIElements.trialAudio && UIElements.trialAudio.src && !UIElements.trialAudio.paused) {
         UIElements.trialAudio.pause();
         UIElements.trialAudio.currentTime = 0;
     }
@@ -220,12 +257,14 @@ function showGameView(viewName) {
     Object.keys(gameViews).forEach(key => {
         if (gameViews[key]) {
             gameViews[key].classList.add('hidden');
-            gameViews[key].style.display = 'none';
+            console.log(`DEBUG: Ocultando vista: ${key}`); // DEBUG
         }
     });
     if (gameViews[viewName]) {
         gameViews[viewName].classList.remove('hidden');
-        gameViews[viewName].style.display = 'flex';
+        console.log(`DEBUG: Mostrando vista: ${viewName}`); // DEBUG
+    } else {
+        console.error(`ERROR: Elemento para la vista '${viewName}' no encontrado en gameViews.`); // DEBUG
     }
 }
 
@@ -504,10 +543,15 @@ function advanceToNextTrial() {
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
-    UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
-    UIElements.narrativeImage.src = imageUrl || '';
-    UIElements.narrativeAudio.src = audioUrl || '';
-    if (audioUrl) UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser."));
+    if (UIElements.narrativeImage) { // Añadir comprobación
+        UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
+        UIElements.narrativeImage.src = imageUrl || '';
+    }
+    if (UIElements.narrativeAudio) { // Añadir comprobación
+        UIElements.narrativeAudio.src = audioUrl || '';
+        if (audioUrl) UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser."));
+    }
+
 
     // Clonar el botón para eliminar listeners anteriores y adjuntar el nuevo.
     const newContinueBtn = buttons.narrativeContinue.cloneNode(true);
@@ -524,16 +568,21 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
 function showLocationNavigationView(location) {
     UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
     UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
-    UIElements.navLocationImage.classList.toggle('hidden', !location.image_url);
-    UIElements.navLocationImage.src = location.image_url || '';
-    UIElements.navLocationAudio.src = location.audio_url || '';
-    if (location.audio_url) {
-        UIElements.navLocationAudio.loop = true;
-        UIElements.navLocationAudio.play().catch(e => console.log("Location audio play prevented by browser:", e));
-    } else {
-        UIElements.navLocationAudio.pause();
-        UIElements.navLocationAudio.currentTime = 0;
+    if (UIElements.navLocationImage) { // Añadir comprobación
+        UIElements.navLocationImage.classList.toggle('hidden', !location.image_url);
+        UIElements.navLocationImage.src = location.image_url || '';
     }
+    if (UIElements.navLocationAudio) { // Añadir comprobación
+        UIElements.navLocationAudio.src = location.audio_url || '';
+        if (location.audio_url) {
+            UIElements.navLocationAudio.loop = true;
+            UIElements.navLocationAudio.play().catch(e => console.log("Location audio play prevented by browser:", e));
+        } else {
+            UIElements.navLocationAudio.pause();
+            UIElements.navLocationAudio.currentTime = 0;
+        }
+    }
+
 
     showGameView('locationNav');
     initMap('location-map');
@@ -552,13 +601,13 @@ function showLocationNavigationView(location) {
     startLocationTracking(location);
 
     if (gameState.gameData.adventure_type === 'selectable') {
-        UIElements.backToListFromNavBtn.classList.remove('hidden');
-        if (UIElements.backToListFromNavBtn.style.display === 'none') {
-            UIElements.backToListFromNavBtn.style.display = 'block';
+        if (UIElements.backToListFromNavBtn) { // Añadir comprobación
+            UIElements.backToListFromNavBtn.classList.remove('hidden');
         }
     } else {
-        UIElements.backToListFromNavBtn.classList.add('hidden');
-        UIElements.backToListFromNavBtn.style.display = 'none';
+        if (UIElements.backToListFromNavBtn) { // Añadir comprobación
+            UIElements.backToListFromNavBtn.classList.add('hidden');
+        }
     }
 }
 
@@ -583,13 +632,12 @@ function showListView(type, items, onSelect) {
     });
 
     showGameView('list');
+    // Asegurarse de que los botones de "volver al listado" estén ocultos en la vista de lista
     if (UIElements.backToListFromNavBtn) {
         UIElements.backToListFromNavBtn.classList.add('hidden');
-        UIElements.backToListFromNavBtn.style.display = 'none';
     }
     if (UIElements.backToListFromTrialBtn) {
         UIElements.backToListFromTrialBtn.classList.add('hidden');
-        UIElements.backToListFromTrialBtn.style.display = 'none';
     }
 }
 
@@ -597,12 +645,27 @@ function showListView(type, items, onSelect) {
  * Renderiza la vista de una prueba específica.
  */
 function renderTrial(trial) {
-    console.log("Rendering trial:", trial);
+    console.log("Rendering trial:", trial.id, trial.name); // DEBUG: Más específico
     UIElements.trialNarrative.innerHTML = trial.narrative; // La narrativa se muestra aquí
-    UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
-    UIElements.trialImage.src = trial.image_url || '';
-    UIElements.trialAudio.src = trial.audio_url || '';
-    if (trial.audio_url) UIElements.trialAudio.play().catch(e => console.log("Audio play prevented."));
+
+    // DEBUG: Log the value of UIElements.trialImage before attempting to use it
+    console.log("DEBUG: UIElements.trialImage before use (line 667 context):", UIElements.trialImage);
+
+    // CORRECCIÓN: Comprobar si UIElements.trialImage existe antes de acceder a classList
+    if (UIElements.trialImage) {
+        UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
+        UIElements.trialImage.src = trial.image_url || '';
+    } else {
+        console.error("ERROR: El elemento UIElements.trialImage no fue encontrado en el DOM al renderizar la prueba. Asegúrate de que existe un <img id='trial-image'> en tu HTML y que su ID es correcto.");
+    }
+
+    if (UIElements.trialAudio) { // Añadir comprobación
+        UIElements.trialAudio.src = trial.audio_url || '';
+        if (trial.audio_url) UIElements.trialAudio.play().catch(e => console.log("Audio play prevented."));
+    } else {
+        console.warn("ADVERTENCIA: Elemento UIElements.trialAudio no encontrado en el DOM.");
+    }
+
 
     UIElements.hintCostDisplay.textContent = trial.hint_cost;
     const hintsUsed = getHintsUsedForTrial(trial.id);
@@ -611,16 +674,17 @@ function renderTrial(trial) {
     renderTrialContent(trial); // Esto renderiza la pregunta
     startTrialTimer();
     showGameView('trial');
+    console.log("DEBUG: Después de showGameView('trial'), #trial-view tiene la clase 'hidden':", UIElements.trial.classList.contains('hidden')); // DEBUG
 
     const currentLocation = getCurrentLocation();
     if (currentLocation && currentLocation.is_selectable_trials) {
-        UIElements.backToListFromTrialBtn.classList.remove('hidden');
-        if (UIElements.backToListFromTrialBtn.style.display === 'none') {
-            UIElements.backToListFromTrialBtn.style.display = 'block';
+        if (UIElements.backToListFromTrialBtn) { // Añadir comprobación
+            UIElements.backToListFromTrialBtn.classList.remove('hidden');
         }
     } else {
-        UIElements.backToListFromTrialBtn.classList.add('hidden');
-        UIElements.backToListFromTrialBtn.style.display = 'none';
+        if (UIElements.backToListFromTrialBtn) { // Añadir comprobación
+            UIElements.backToListFromTrialBtn.classList.add('hidden');
+        }
     }
 }
 
@@ -629,7 +693,13 @@ function renderTrial(trial) {
  */
 function renderTrialContent(trial) {
     UIElements.trialContent.innerHTML = '';
-    UIElements.validateAnswer.classList.remove('hidden');
+    // CORRECCIÓN: Usar buttons.validateAnswer en lugar de UIElements.validateAnswer
+    if (buttons.validateAnswer) { // Añadir comprobación por si el botón no existe
+        buttons.validateAnswer.classList.remove('hidden');
+    } else {
+        console.error("ERROR: El botón de validación (validateAnswer) no fue encontrado.");
+    }
+
 
     switch (trial.trial_type) {
         case 'qr':
@@ -638,7 +708,10 @@ function renderTrialContent(trial) {
             qrButton.className = 'action-button';
             qrButton.onclick = startQrScanner;
             UIElements.trialContent.appendChild(qrButton);
-            UIElements.validateAnswer.classList.add('hidden');
+            // CORRECCIÓN: Usar buttons.validateAnswer en lugar de UIElements.validateAnswer
+            if (buttons.validateAnswer) {
+                buttons.validateAnswer.classList.add('hidden');
+            }
             break;
 
         case 'gps':
@@ -648,7 +721,10 @@ function renderTrialContent(trial) {
             targetMarker = L.marker(targetCoords).addTo(map).bindPopup("Punto de la prueba");
             targetCircle = L.circle(targetCoords, { radius: trial.tolerance_meters }).addTo(map);
             startLocationTracking(trial, true);
-            UIElements.validateAnswer.classList.add('hidden');
+            // CORRECCIÓN: Usar buttons.validateAnswer en lugar de UIElements.validateAnswer
+            if (buttons.validateAnswer) {
+                buttons.validateAnswer.classList.add('hidden');
+            }
             break;
 
         case 'text':
@@ -688,7 +764,7 @@ function renderTextTrial(trial) {
                     document.querySelectorAll('.text-option').forEach(el => el.classList.remove('selected'));
                     optionDiv.classList.add('selected');
                 };
-                optionsContainer.appendChild(optionsContainer);
+                optionsContainer.appendChild(optionDiv);
             });
             UIElements.trialContent.appendChild(optionsContainer);
             break;
@@ -787,6 +863,7 @@ function processAnswer(isCorrect) {
  * Solicita una pista para la prueba actual.
  */
 function requestHint() {
+    console.log("DEBUG: Función requestHint() llamada.");
     const trial = getCurrentTrial();
     if (!trial) return;
 
@@ -811,7 +888,13 @@ function requestHint() {
     }
 
     UIElements.hintText.innerHTML = hintText;
-    UIElements.hintModal.classList.remove('hidden');
+    // Modificado para usar style.display directamente
+    if (UIElements.hintModal) {
+        console.log("DEBUG: Intentando mostrar el modal de pista. Display antes:", UIElements.hintModal.style.display);
+        UIElements.hintModal.style.display = 'flex'; // Mostrar directamente
+        console.log("DEBUG: Modal de pista mostrado directamente. Display después:", UIElements.hintModal.style.display);
+    }
+
 
     gameState.totalScore = Math.max(0, gameState.totalScore - trial.hint_cost);
     UIElements.scoreDisplay.textContent = gameState.totalScore;
@@ -967,7 +1050,13 @@ function stopLocationTracking() {
 // =================================================================
 
 function startQrScanner() {
-    UIElements.qrScannerModal.classList.remove('hidden');
+    // Modificado para usar style.display directamente
+    if (UIElements.qrScannerModal) {
+        UIElements.qrScannerModal.style.display = 'flex'; // Mostrar directamente
+    } else {
+        console.warn("ADVERTENCIA: Elemento #qr-scanner-modal no encontrado en el DOM.");
+    }
+
 
     if (!html5QrCode) {
         try {
@@ -1005,7 +1094,10 @@ function stopQrScanner() {
     if (html5QrCode && html5QrCode.isScanning) {
         html5QrCode.stop().catch(err => console.error("Error al detener el escáner:", err));
     }
-    UIElements.qrScannerModal.classList.add('hidden');
+    // Modificado para usar style.display directamente
+    if (UIElements.qrScannerModal) {
+        UIElements.qrScannerModal.style.display = 'none'; // Ocultar directamente
+    }
 }
 
 
@@ -1138,8 +1230,10 @@ function getHintsUsedForTrial(trialId) {
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
     alertDiv.className = `app-alert ${type}`;
+    document.body.appendChild(alertDiv); // Append before setting text to avoid reflow issues
+
+    // Set text content after appending to avoid potential reflows if message is long
     alertDiv.textContent = message;
-    document.body.appendChild(alertDiv);
 
     setTimeout(() => {
         alertDiv.style.opacity = '1';
