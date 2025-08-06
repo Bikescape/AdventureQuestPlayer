@@ -379,8 +379,8 @@ function renderCurrentState() {
         return;
     }
 
+    // Si aún no hemos seleccionado una ubicación (inicio del juego)
     if (locIndex === -1) {
-        // Muestra la narrativa inicial del juego
         showNarrativeView(game.initial_narrative, game.image_url, game.audio_url, advanceToNextLocation);
         return;
     }
@@ -388,25 +388,29 @@ function renderCurrentState() {
     const location = game.locations[locIndex];
     const trialIndex = gameState.currentTrialIndex;
 
+    // Si aún no hemos seleccionado una prueba para la ubicación actual (narrativa de ubicación)
     if (trialIndex === -1) {
-        // Muestra la narrativa inicial de la ubicación
         showNarrativeView(location.initial_narrative, location.image_url, location.audio_url, startLocationTrials);
         return;
     }
 
-    // Si ya estamos en una prueba (currentTrialIndex no es -1) y no está completada
+    // Si ya estamos en una ubicación y tenemos un índice de prueba
     const trial = location.trials[trialIndex];
-    if (!isTrialCompleted(trial.id)) {
-        renderTrial(trial); // Renderiza la prueba directamente con su narrativa
+    if (isTrialCompleted(trial.id)) {
+        // Si la prueba actual ya está completada, avanzamos el estado
+        if (location.is_selectable_trials) {
+            // Si es seleccionable, volvemos a la lista para que el usuario elija otra
+            startLocationTrials();
+        } else {
+            // Si es lineal, avanzamos a la siguiente prueba y luego renderizamos el nuevo estado
+            gameState.currentTrialIndex++; // Avanzamos el índice a la siguiente prueba
+            renderCurrentState(); // Volvemos a llamar a renderCurrentState para que muestre la nueva prueba
+        }
         return;
     }
     
-    // Si la prueba ya está completada, avanza
-    if (location.is_selectable_trials) {
-        startLocationTrials(); // Vuelve a la lista de pruebas seleccionables si es el caso
-    } else {
-        advanceToNextTrial(); // Avanza a la siguiente prueba lineal
-    }
+    // Si la prueba actual no está completada, la renderizamos
+    renderTrial(trial);
 }
 
 
@@ -453,7 +457,6 @@ function startLocationTrials() {
 
     if (location.is_selectable_trials) {
         // Para pruebas seleccionables, mostramos la lista.
-        // El callback de la lista se encargará de mostrar la prueba directamente.
         showListView('pruebas', location.trials, (trial) => {
             const trialIndex = location.trials.findIndex(t => t.id === trial.id);
             if (trialIndex === -1) {
@@ -462,20 +465,15 @@ function startLocationTrials() {
             }
             gameState.currentTrialIndex = trialIndex;
             saveState();
-            
-            // Llamar a renderTrial con un pequeño delay para asegurar que el estado se guarde correctamente
-            setTimeout(() => {
-                renderTrial(trial);
-            }, 50);
+            renderCurrentState(); // Llama a renderCurrentState para que muestre la prueba seleccionada
         });
     } else {
-        // Para pruebas lineales, avanzamos directamente a la primera prueba de la ubicación
-        // si currentTrialIndex es -1 (después de la narrativa de la ubicación).
-        // O avanzamos a la siguiente prueba si ya estábamos en una.
+        // Para pruebas lineales, aseguramos que el índice de la prueba sea 0
+        // si venimos de la narrativa de la ubicación, y luego renderizamos.
         if (gameState.currentTrialIndex === -1) {
-            gameState.currentTrialIndex = 0; // Inicia con la primera prueba de la ubicación
+            gameState.currentTrialIndex = 0;
         }
-        advanceToNextTrial();
+        renderCurrentState(); // Llama a renderCurrentState para que muestre la primera prueba lineal
     }
 }
 
@@ -484,17 +482,14 @@ function startLocationTrials() {
  */
 function advanceToNextTrial() {
     const location = getCurrentLocation();
+    gameState.currentTrialIndex++; // Incrementa el índice para ir a la siguiente prueba
 
-    // Incrementa el índice para obtener la siguiente prueba
-    // Si currentTrialIndex ya está en el último, advanceToNextLocation se encargará de ello.
-    if (gameState.currentTrialIndex < location.trials.length) {
-        const trial = location.trials[gameState.currentTrialIndex];
-        saveState();
-        renderTrial(trial); // Renderiza la prueba directamente con su narrativa
-        gameState.currentTrialIndex++; // Prepara el índice para la próxima llamada
-    } else {
-        // Si no hay más pruebas en la ubicación actual, avanza a la siguiente ubicación.
+    if (gameState.currentTrialIndex >= location.trials.length) {
+        // Si no hay más pruebas en esta ubicación, avanza a la siguiente ubicación
         advanceToNextLocation();
+    } else {
+        // Si hay más pruebas, renderiza el estado actual (mostrará la nueva prueba)
+        renderCurrentState();
     }
 }
 
@@ -693,7 +688,7 @@ function renderTextTrial(trial) {
                     document.querySelectorAll('.text-option').forEach(el => el.classList.remove('selected'));
                     optionDiv.classList.add('selected');
                 };
-                optionsContainer.appendChild(optionDiv);
+                optionsContainer.appendChild(optionsContainer);
             });
             UIElements.trialContent.appendChild(optionsContainer);
             break;
