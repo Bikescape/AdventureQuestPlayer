@@ -103,34 +103,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Asegurarse de que los modales y sus botones de cierre estén ocultos al cargar
+    // Asegurarse de que los modales estén ocultos al cargar usando style.display
     if (UIElements.qrScannerModal) {
-        UIElements.qrScannerModal.style.display = 'none'; // Usar style.display directamente
+        UIElements.qrScannerModal.style.display = 'none';
         console.log("DEBUG: QR Scanner Modal hidden on load. Display:", UIElements.qrScannerModal.style.display);
     } else {
         console.warn("ADVERTENCIA: Elemento #qr-scanner-modal no encontrado en el DOM.");
     }
-    // Explicitly hide the close button for QR scanner (if it's not inside the modal)
-    if (buttons.closeQrScanner) {
-        buttons.closeQrScanner.classList.add('hidden'); // Mantener hidden si está fuera del modal
-        console.log("DEBUG: QR Scanner Close Button hidden on load:", buttons.closeQrScanner.classList.contains('hidden'));
-    } else {
-        console.warn("ADVERTENCIA: Elemento #close-qr-scanner-btn no encontrado en el DOM.");
-    }
 
     if (UIElements.hintModal) {
-        UIElements.hintModal.style.display = 'none'; // Usar style.display directamente
+        UIElements.hintModal.style.display = 'none';
         console.log("DEBUG: Hint Modal hidden on load. Display:", UIElements.hintModal.style.display);
     } else {
         console.warn("ADVERTENCIA: Elemento #hint-modal no encontrado en el DOM.");
     }
-    // Explicitly hide the close button for Hint modal (if it's not inside the modal)
-    if (buttons.closeHint) {
-        buttons.closeHint.classList.add('hidden'); // Mantener hidden si está fuera del modal
-        console.log("DEBUG: Hint Close Button hidden on load:", buttons.closeHint.classList.contains('hidden'));
-    } else {
-        console.warn("ADVERTENCIA: Elemento #close-hint-btn no encontrado en el DOM.");
+
+    // Los botones de cierre dentro de los modales también se ocultarán con el modal.
+    // Si estuvieran fuera, se les podría añadir la clase 'hidden' aquí.
+    if (buttons.closeQrScanner) {
+        // Si el botón está dentro del modal, su visibilidad la controla el modal padre.
+        // Si estuviera fuera y se quisiera ocultar por defecto: buttons.closeQrScanner.classList.add('hidden');
+        console.log("DEBUG: Botón de cerrar escáner encontrado.");
     }
+    if (buttons.closeHint) {
+        // Si el botón está dentro del modal, su visibilidad la controla el modal padre.
+        // Si estuviera fuera y se quisiera ocultar por defecto: buttons.closeHint.classList.add('hidden');
+        console.log("DEBUG: Botón de cerrar pista encontrado.");
+    }
+
 
     initWelcomeScreen();
     attachEventListeners();
@@ -184,7 +184,8 @@ function attachEventListeners() {
     buttons.backToWelcome.addEventListener('click', initWelcomeScreen);
     buttons.startGame.addEventListener('click', startGame);
     UIElements.hintBtn.addEventListener('click', requestHint);
-    // Modificado para usar style.display directamente
+    
+    // Modificado para usar style.display directamente para cerrar la pista
     buttons.closeHint.addEventListener('click', () => {
         console.log("DEBUG: Botón 'Entendido' de la pista clickeado.");
         if (UIElements.hintModal) {
@@ -192,9 +193,12 @@ function attachEventListeners() {
             console.log("DEBUG: Modal de pista ocultado directamente. Display actual:", UIElements.hintModal.style.display);
         }
     });
+
     buttons.validateAnswer.addEventListener('click', validateCurrentAnswer);
-    // Modificado para usar style.display directamente
-    buttons.closeQrScanner.addEventListener('click', stopQrScanner); // stopQrScanner ya maneja el display
+    
+    // stopQrScanner ya maneja el style.display
+    buttons.closeQrScanner.addEventListener('click', stopQrScanner); 
+    
     buttons.playAgain.addEventListener('click', () => {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
@@ -241,15 +245,17 @@ function showGameView(viewName) {
     console.log(`Mostrando vista de juego: ${viewName}`);
 
     // Detener audios de otras vistas para evitar solapamientos.
-    if (UIElements.navLocationAudio && UIElements.navLocationAudio.src && !UIElements.navLocationAudio.paused) {
+    // Se ha movido la lógica de reproducción de audio a las funciones específicas de vista
+    // para evitar conflictos de play/pause.
+    if (UIElements.navLocationAudio && !UIElements.navLocationAudio.paused) {
         UIElements.navLocationAudio.pause();
         UIElements.navLocationAudio.currentTime = 0;
     }
-    if (UIElements.narrativeAudio && UIElements.narrativeAudio.src && !UIElements.narrativeAudio.paused) {
+    if (UIElements.narrativeAudio && !UIElements.narrativeAudio.paused) {
         UIElements.narrativeAudio.pause();
         UIElements.narrativeAudio.currentTime = 0;
     }
-    if (UIElements.trialAudio && UIElements.trialAudio.src && !UIElements.trialAudio.paused) {
+    if (UIElements.trialAudio && !UIElements.trialAudio.paused) {
         UIElements.trialAudio.pause();
         UIElements.trialAudio.currentTime = 0;
     }
@@ -549,7 +555,10 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
     }
     if (UIElements.narrativeAudio) { // Añadir comprobación
         UIElements.narrativeAudio.src = audioUrl || '';
-        if (audioUrl) UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser."));
+        // Reproducir audio con un pequeño retraso para evitar AbortError
+        if (audioUrl) setTimeout(() => {
+            UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser:", e));
+        }, 100); // Pequeño retraso
     }
 
 
@@ -576,7 +585,10 @@ function showLocationNavigationView(location) {
         UIElements.navLocationAudio.src = location.audio_url || '';
         if (location.audio_url) {
             UIElements.navLocationAudio.loop = true;
-            UIElements.navLocationAudio.play().catch(e => console.log("Location audio play prevented by browser:", e));
+            // Reproducir audio con un pequeño retraso para evitar AbortError
+            setTimeout(() => {
+                UIElements.navLocationAudio.play().catch(e => console.log("Location audio play prevented by browser:", e));
+            }, 100); // Pequeño retraso
         } else {
             UIElements.navLocationAudio.pause();
             UIElements.navLocationAudio.currentTime = 0;
@@ -661,7 +673,9 @@ function renderTrial(trial) {
 
     if (UIElements.trialAudio) { // Añadir comprobación
         UIElements.trialAudio.src = trial.audio_url || '';
-        if (trial.audio_url) UIElements.trialAudio.play().catch(e => console.log("Audio play prevented."));
+        if (trial.audio_url) setTimeout(() => { // Pequeño retraso para audio de prueba
+            UIElements.trialAudio.play().catch(e => console.log("Audio play prevented."));
+        }, 100);
     } else {
         console.warn("ADVERTENCIA: Elemento UIElements.trialAudio no encontrado en el DOM.");
     }
@@ -841,7 +855,7 @@ function processAnswer(isCorrect) {
             hintsUsed: hintsUsed
         });
 
-        showAlert('¡Correcto!', 'success');
+        showAlert('¡Correcto!', 'success'); // Muestra mensaje de éxito
         syncStateWithSupabase();
 
         const location = getCurrentLocation();
@@ -854,8 +868,8 @@ function processAnswer(isCorrect) {
         }, 1500);
 
     } else {
-        showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error');
-        startTrialTimer();
+        showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error'); // Muestra mensaje de error
+        startTrialTimer(); // Reinicia el temporizador si la respuesta es incorrecta
     }
 }
 
@@ -1235,12 +1249,13 @@ function showAlert(message, type = 'info') {
     // Set text content after appending to avoid potential reflows if message is long
     alertDiv.textContent = message;
 
+    // Add the 'show' class to trigger the opacity transition
     setTimeout(() => {
-        alertDiv.style.opacity = '1';
+        alertDiv.classList.add('show');
     }, 10);
 
     setTimeout(() => {
-        alertDiv.style.opacity = '0';
+        alertDiv.classList.remove('show'); // Remove to start fade out
         setTimeout(() => alertDiv.remove(), 500);
     }, 3000);
 }

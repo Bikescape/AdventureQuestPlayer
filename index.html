@@ -48,7 +48,6 @@
         <section id="game-detail-screen" class="screen hidden">
             <div class="content-box">
                 <h2 id="game-detail-title"></h2>
-                <!-- Eliminado el título "Mecánica" según la solicitud -->
                 <p id="game-detail-mechanics"></p>
             </div>
             <div id="start-form-container">
@@ -126,12 +125,12 @@
         </section>
     </main>
 
-    <div id="app-alert" class="hidden"></div>
-    <div id="qr-scanner-modal" class="hidden">
+    <div id="app-alert"></div> <!-- Eliminada la clase hidden, ahora el JS la gestiona -->
+    <div id="qr-scanner-modal"> <!-- Eliminada la clase hidden, ahora el JS la gestiona -->
         <div id="qr-reader"></div>
         <button id="close-qr-scanner-btn">Cerrar Escáner</button>
     </div>
-    <div id="hint-modal" class="hidden">
+    <div id="hint-modal"> <!-- Eliminada la clase hidden, ahora el JS la gestiona -->
         <div class="hint-content">
             <h3>Pista</h3>
             <p id="hint-text"></p>
