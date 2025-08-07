@@ -23,7 +23,7 @@
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
     --border-radius: 8px;
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    --app-max-width: 600px; /* Ancho máximo para el contenido principal */
+    --app-max-width: 900px; /* Ancho máximo para el contenido principal (MODIFICADO) */
 }
 
 body {
@@ -180,6 +180,7 @@ body {
     box-shadow: var(--shadow);
     object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
     box-sizing: border-box; /* Incluye padding y border en el cálculo del ancho */
+    cursor: pointer; /* Añadido para indicar que se puede hacer clic */
 }
 
 /* Específicamente para imágenes de narrativa */
@@ -654,4 +655,53 @@ body {
 }
 .ranking-item span:last-child {
     color: var(--text-secondary);
+}
+
+/* NUEVO: Modal de zoom para imágenes */
+.zoom-modal {
+    position: fixed;
+    z-index: 10005;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.zoom-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.zoom-modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    display: block; /* Para centrar la imagen */
+    margin: auto;
+}
+
+.zoom-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.zoom-close-btn:hover,
+.zoom-close-btn:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
 }

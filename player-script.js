@@ -184,7 +184,7 @@ function attachEventListeners() {
     buttons.backToWelcome.addEventListener('click', initWelcomeScreen);
     buttons.startGame.addEventListener('click', startGame);
     UIElements.hintBtn.addEventListener('click', requestHint);
-    
+
     // Modificado para usar style.display directamente para cerrar la pista
     buttons.closeHint.addEventListener('click', () => {
         console.log("DEBUG: Botón 'Entendido' de la pista clickeado.");
@@ -195,10 +195,10 @@ function attachEventListeners() {
     });
 
     buttons.validateAnswer.addEventListener('click', validateCurrentAnswer);
-    
+
     // stopQrScanner ya maneja el style.display
-    buttons.closeQrScanner.addEventListener('click', stopQrScanner); 
-    
+    buttons.closeQrScanner.addEventListener('click', stopQrScanner);
+
     buttons.playAgain.addEventListener('click', () => {
         localStorage.removeItem('treasureHuntGameState');
         location.reload();
@@ -453,7 +453,7 @@ function renderCurrentState() {
         }
         return;
     }
-    
+
     // Si la prueba actual no está completada, la renderizamos
     renderTrial(trial);
 }
@@ -700,6 +700,7 @@ function renderTrial(trial) {
             UIElements.backToListFromTrialBtn.classList.add('hidden');
         }
     }
+    setupImageZoomListener(); // NUEVO: Configura el listener de zoom para la imagen de la prueba
 }
 
 /**
@@ -833,16 +834,12 @@ function validateCurrentAnswer() {
  * Procesa el resultado de una validación.
  */
 function processAnswer(isCorrect) {
-    // MODIFICACIÓN: Ya no se llama a stopTrialTimer aquí. Ahora se detendrá cuando la vista cambie.
-    // MODIFICACIÓN: El tiempo se calcula al procesar la respuesta final, no se reinicia con intentos incorrectos.
+    stopTrialTimer();
     const trial = getCurrentTrial();
     const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
     const hintsUsed = getHintsUsedForTrial(trial.id);
 
     if (isCorrect) {
-        // Detener el temporizador de la prueba solo si la respuesta es correcta
-        stopTrialTimer();
-
         const baseScore = gameState.gameData.initial_score_per_trial;
         const timePenalty = timeTaken;
         const hintPenalty = hintsUsed * trial.hint_cost;
@@ -881,7 +878,7 @@ function processAnswer(isCorrect) {
 
     } else {
         showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
-        // MODIFICACIÓN: Ya no se llama a startTrialTimer aquí para evitar que se reinicie.
+        startTrialTimer(); // Reinicia el temporizador si la respuesta es incorrecta
     }
 }
 
@@ -1211,7 +1208,7 @@ function playArrivalSound() {
         oscillator.frequency.setValueAtTime(1000, audioContext.currentTime); // Frecuencia más alta para un tono más agudo (1000 Hz)
         gainNode.gain.setValueAtTime(0.8, audioContext.currentTime); // Ganancia inicial más fuerte
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); // Decay rápido pero audible
-        
+
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.5); // Duración del sonido
     } catch (e) {
@@ -1279,4 +1276,61 @@ function showAlert(message, type = 'info', parentElement = document.body) {
         };
         alertDiv.addEventListener('transitionend', onTransitionEnd);
     }, 3000);
+}
+
+/**
+ * NUEVO: Configura el listener de clic para la imagen de la prueba para hacer zoom.
+ */
+function setupImageZoomListener() {
+    if (!UIElements.trialImage) {
+        return;
+    }
+
+    // Asegurarse de que el listener no se añade varias veces
+    UIElements.trialImage.removeEventListener('click', showZoomedImage);
+    UIElements.trialImage.addEventListener('click', showZoomedImage);
+
+    // Función para mostrar la imagen en un modal
+    function showZoomedImage() {
+        const imageUrl = UIElements.trialImage.src;
+        if (!imageUrl) return;
+
+        let modal = document.querySelector('.zoom-modal');
+        let modalImg = document.querySelector('.zoom-modal-content');
+
+        if (!modal) {
+            // Si el modal no existe, lo creamos
+            modal = document.createElement('div');
+            modal.className = 'zoom-modal';
+            modal.id = 'image-zoom-modal'; // Darle un ID para referenciarlo
+
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'zoom-close-btn';
+            closeBtn.innerHTML = '&times;';
+            modal.appendChild(closeBtn);
+            closeBtn.onclick = () => hideZoomedImage(modal);
+
+            modalImg = document.createElement('img');
+            modalImg.className = 'zoom-modal-content';
+            modal.appendChild(modalImg);
+
+            document.body.appendChild(modal);
+
+            // Cerrar el modal al hacer clic en el overlay
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    hideZoomedImage(modal);
+                }
+            };
+        }
+
+        modalImg.src = imageUrl;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Evita el scroll del fondo
+    }
+
+    function hideZoomedImage(modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 }
