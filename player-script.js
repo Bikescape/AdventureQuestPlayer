@@ -838,7 +838,7 @@ function processAnswer(isCorrect) {
     if (!trial) return;
 
     if (isCorrect) {
-        // ✅ CORREGIDO: El cronómetro solo se detiene al responder correctamente.
+        // ✅ El cronómetro solo se detiene al responder correctamente.
         stopTrialTimer();
 
         const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
@@ -881,7 +881,8 @@ function processAnswer(isCorrect) {
 
     } else {
         showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
-        // El cronómetro continúa ejecutándose aquí, ya no se reinicia.
+        // 🚨 CORRECCIÓN: No se realiza ninguna acción que detenga o reinicie el cronómetro.
+        // El cronómetro continúa ejecutándose aquí.
     }
 }
 
