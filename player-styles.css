@@ -23,7 +23,7 @@
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
     --border-radius: 8px;
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    --app-max-width: 900px; /* Ancho máximo para el contenido principal (MODIFICADO) */
+    --app-max-width: 900px;
 }
 
 body {
@@ -35,7 +35,8 @@ body {
     flex-direction: column;
     min-height: 100vh;
     margin: 0;
-    padding: 0;
+    /* ANTES: padding: 0; */
+    padding: 0 10px; /* Ajuste para un espaciado lateral mínimo en todas las pantallas */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -46,39 +47,28 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 20px 0; /* Ajuste para eliminar padding lateral */
     width: 100%;
+    /* ANTES: max-width: var(--app-max-width); */
+    max-width: none; /* Se ha eliminado la restricción de ancho máximo */
     margin: 0 auto;
-    position: relative; /* Para posicionar alertas */
+    position: relative;
 }
 
 /* ======== CLASE HIDDEN GENÉRICA ======== */
 .hidden {
-    display: none !important; /* Usar !important para asegurar que se aplique sobre otras reglas de display */
+    display: none !important;
 }
 
 /* ======== PANTALLAS PRINCIPALES ======== */
 .screen {
     width: 100%;
-    max-width: var(--app-max-width); /* Asegura que las pantallas no se estiren demasiado */
+    max-width: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
+    padding: 0; /* Se ha eliminado el padding de las pantallas */
     text-align: center;
-}
-
-
-/* Contenedor general para el contenido con fondo y sombra */
-.content-box {
-    background: var(--surface);
-    padding: 25px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: var(--app-max-width); /* Restringe el ancho del contenido interno */
-    box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
 }
 
 /* ======== HEADER DEL JUEGO ======== */
@@ -95,7 +85,6 @@ body {
     top: 0;
     z-index: 1000;
 }
-
 
 #team-info {
     font-weight: bold;
@@ -129,7 +118,9 @@ body {
     font-size: 1em;
     font-weight: bold;
     transition: var(--transition);
-    margin-top: 10px; /* Espacio entre botones */
+    margin-top: 10px;
+    width: 100%; /* Ajustado para que los botones también ocupen el ancho completo */
+    max-width: 400px;
 }
 
 .action-button {
@@ -149,13 +140,13 @@ body {
 }
 
 .secondary-button:hover {
-    background: #5d4037; /* Tono más oscuro de marrón */
+    background: #5d4037;
     transform: translateY(-2px);
     box-shadow: var(--shadow);
 }
 
 .hint-button {
-    background: #03a9f4; /* Azul para pistas */
+    background: #03a9f4;
     color: white;
 }
 
@@ -164,31 +155,24 @@ body {
 }
 
 /* ======== ESTILOS PARA IMÁGENES ======== */
-/* Regla general para todas las imágenes dentro del contenido */
-.content-box img,
-.narrative-box img,
-#narrative-text img,
-.narrative-image,
-#trial-image,
-#nav-location-image {
-    width: 100% !important; /* Fuerza que ocupe el 100% del ancho del contenedor */
-    max-width: 100% !important; /* Asegura que no exceda el ancho del contenedor */
-    height: auto !important; /* Mantiene la proporción de la imagen */
-    display: block; /* Elimina espacio extra inferior y permite margin auto */
-    margin: 10px auto 20px auto; /* Centra la imagen y da espacio */
+.game-view img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 10px auto 20px auto;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
-    box-sizing: border-box; /* Incluye padding y border en el cálculo del ancho */
-    cursor: pointer; /* Añadido para indicar que se puede hacer clic */
+    object-fit: cover;
+    box-sizing: border-box;
+    cursor: pointer;
 }
 
-/* Específicamente para imágenes de narrativa */
 .narrative-image {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
-    margin: 15px auto 25px auto !important; /* Más espacio para narrativa */
+    margin: 15px auto 25px auto !important;
 }
 
 
@@ -235,12 +219,11 @@ body {
     box-shadow: var(--shadow);
     cursor: pointer;
     transition: var(--transition);
-    /* Cambiado a disposición vertical */
     display: flex;
-    flex-direction: column; /* Apila los elementos verticalmente */
-    align-items: center; /* Centra horizontalmente los elementos dentro de la tarjeta */
-    gap: 10px; /* Espacio entre la miniatura y el texto */
-    text-align: center; /* Centra el texto de la tarjeta */
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
 }
 
 .game-card:hover {
@@ -250,7 +233,7 @@ body {
 
 .game-card h2 {
     color: var(--text-primary);
-    margin-bottom: 5px; /* Ajustado para mejor espaciado vertical */
+    margin-bottom: 5px;
     font-size: 1.5em;
 }
 
@@ -259,14 +242,14 @@ body {
     font-size: 0.95em;
 }
 
-.game-thumbnail { /* Estilo para la miniatura del juego */
-    width: 75%; /* Hace que sea responsiva a su contenedor */
-    height: auto; /* Mantiene la relación de aspecto */
-    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
-    border-radius: var(--border-radius); /* Bordes redondeados */
-    flex-shrink: 0; /* Evita que se encoja */
+.game-thumbnail {
+    width: 75%;
+    height: auto;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    flex-shrink: 0;
     box-shadow: var(--shadow);
-    margin-bottom: 10px; /* Margen inferior para separar del texto */
+    margin-bottom: 10px;
 }
 
 
@@ -282,7 +265,7 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 400px; /* Controla el ancho del formulario */
+    max-width: 400px;
     margin-top: 20px;
 }
 
@@ -297,34 +280,30 @@ body {
 
 /* ======== PANTALLA DE JUEGO (GAMEPLAY) ======== */
 #game-play-screen {
-    justify-content: flex-start; /* Alinea el contenido arriba */
-    padding-top: 0; /* Ya el header tiene padding */
+    justify-content: flex-start;
+    padding-top: 0;
+    width: 100%;
+    padding: 0 10px; /* Asegura el padding lateral solo en esta sección */
 }
 
 /* Vistas dentro de GamePlay */
 .game-view {
     width: 100%;
-    max-width: var(--app-max-width);
+    max-width: none;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 20px 0; /* Solo padding vertical */
-}
-
-/* Contenedor de narrativa (puede ser usado en varias vistas) */
-.narrative-box {
-    padding-bottom: 30px; /* Más espacio para el botón */
+    padding: 20px 0; /* Padding vertical, sin lateral */
 }
 
 #narrative-text {
     font-size: 1.1em;
     color: var(--text-primary);
     margin-bottom: 20px;
-    text-align: justify; /* Justifica el texto para mejor lectura */
+    text-align: justify;
     hyphens: auto;
     word-wrap: break-word;
-    white-space: pre-wrap; /* Mantiene los saltos de línea y espacios en blanco del texto */
 }
 
 #narrative-audio {
@@ -350,38 +329,17 @@ body {
     font-size: 1em;
     color: var(--text-secondary);
     margin-bottom: 15px;
-    white-space: pre-wrap; /* Mantiene los saltos de línea y espacios en blanco del texto */
-}
-
-#nav-location-image {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 10px auto 20px auto;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    object-fit: cover;
-    box-sizing: border-box;
-    cursor: pointer;
-}
-
-#nav-location-audio {
-    width: 100%;
-    margin-top: 15px;
-    margin-bottom: 15px;
-    border-radius: var(--border-radius);
 }
 
 .map-container {
     width: 100%;
-    height: 60vh; /* Altura responsiva del mapa, por ejemplo 60% del viewport height */
-    min-height: 300px; /* Altura mínima para que sea visible en pantallas pequeñas */
+    height: 60vh;
+    min-height: 300px;
     background: var(--border);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
     margin-top: 20px;
-    overflow: hidden; /* Asegura que el mapa no se salga de los bordes */
+    overflow: hidden;
 }
 
 #distance-info {
@@ -412,7 +370,7 @@ body {
 #arrival-progress-bar::before {
     content: '';
     display: block;
-    width: var(--progress-width, 0%); /* Variable CSS para controlar el ancho */
+    width: var(--progress-width, 0%);
     height: 100%;
     background-color: var(--success-color);
     border-radius: 5px;
@@ -458,7 +416,7 @@ body {
 
 #trial-header {
     display: flex;
-    justify-content: flex-end; /* Alinea el temporizador a la derecha */
+    justify-content: flex-end;
     width: 100%;
     margin-bottom: 15px;
 }
@@ -479,12 +437,11 @@ body {
     text-align: justify;
     hyphens: auto;
     word-wrap: break-word;
-    white-space: pre-wrap; /* Mantiene los saltos de línea y espacios en blanco del texto */
 }
 
 #trial-content {
-    background: none; /* Se ha eliminado el fondo para que ocupe todo el ancho */
-    padding: 0; /* Se ha eliminado el padding */
+    background: none;
+    padding: 0;
     border-radius: var(--border-radius);
     width: 100%;
     margin-bottom: 20px;
@@ -492,7 +449,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
-    position: relative; /* Añadido para el posicionamiento absoluto de las alertas hijas */
+    position: relative;
 }
 
 #trial-content input[type="text"],
@@ -543,7 +500,7 @@ body {
     cursor: grab;
     transition: background-color 0.2s;
     text-align: center;
-    position: relative; /* Necesario para los bordes de arrastre */
+    position: relative;
 }
 
 .ordering-item:active {
@@ -556,17 +513,16 @@ body {
 }
 
 .ordering-item.drag-over {
-    background-color: #ffe0b2; /* Un tono más claro de naranja */
+    background-color: #ffe0b2;
 }
-
 
 .trial-actions {
     display: flex;
     gap: 15px;
     width: 100%;
-    justify-content: center; /* Centrar los botones */
+    justify-content: center;
     margin-top: 20px;
-    flex-wrap: wrap; /* Permite que los botones se envuelvan en pantallas pequeñas */
+    flex-wrap: wrap;
 }
 
 /* Botones de "Volver al Listado" */
@@ -576,13 +532,13 @@ body {
 
 /* Alertas de la aplicación */
 #app-alert {
-    position: absolute; /* Cambiado de fixed a absolute para posicionamiento relativo al padre */
-    bottom: 10px; /* Posición relativa a su padre (#trial-content) */
+    position: absolute;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--text-primary);
     color: white;
-    padding: 10px 20px; /* Padding ligeramente más pequeño para mejor ajuste */
+    padding: 10px 20px;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
     z-index: 10001;
@@ -590,13 +546,13 @@ body {
     transition: opacity 0.5s ease-in-out;
     max-width: 90%;
     text-align: center;
-    pointer-events: none; /* Permite que los clics pasen a través de la alerta cuando no está visible */
-    white-space: nowrap; /* Evita que el texto se envuelva si el mensaje es corto */
+    pointer-events: none;
+    white-space: nowrap;
 }
 
-#app-alert.show { /* Esta clase ahora se añade en showAlert para mostrar el mensaje */
+#app-alert.show {
     opacity: 1;
-    pointer-events: auto; /* Reactiva los eventos de puntero cuando es visible */
+    pointer-events: auto;
 }
 
 #app-alert.success {
@@ -613,15 +569,14 @@ body {
     top: 0; left: 0;
     width: 100%; height: 100%;
     background: rgba(0,0,0,0.8);
-    /* Eliminado: display: flex; -> Ahora gestionado por JS (style.display) */
     justify-content: center;
     align-items: center;
     z-index: 10004;
 }
 #qr-reader {
     width: 100%;
-    max-width: 400px; /* Tamaño máximo del lector QR */
-    background: white; /* Fondo blanco para el lector */
+    max-width: 400px;
+    background: white;
     border-radius: var(--border-radius);
     overflow: hidden;
 }
@@ -641,7 +596,6 @@ body {
     top: 0; left: 0;
     width: 100%; height: 100%;
     background: rgba(0,0,0,0.6);
-    /* Eliminado: display: flex; -> Ahora gestionado por JS (style.display) */
     justify-content: center;
     align-items: center;
     z-index: 10003;
@@ -681,37 +635,34 @@ body {
 
 /* Estilos para el zoom de imágenes */
 .zoom-modal {
-    display: none; /* Oculto por defecto */
-    position: fixed; /* Mantiene el modal en su lugar */
-    z-index: 1000; /* Se superpone a todo lo demás */
+    display: none;
+    position: fixed;
+    z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto; /* Permite desplazamiento si la imagen es muy grande */
-    background-color: rgba(0, 0, 0, 0.9); /* Fondo semitransparente oscuro */
-    transition: opacity 0.3s ease-in-out; /* Transición para el efecto de fundido */
-    opacity: 0; /* Opacidad inicial para el efecto de fundido */
-    justify-content: center; /* Centra horizontalmente el contenido */
-    align-items: center; /* Centra verticalmente el contenido */
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.9);
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+    justify-content: center;
+    align-items: center;
 }
 
-/* Cuando el modal está activo (visible) */
 .zoom-modal.active {
     display: flex;
     opacity: 1;
 }
 
-/* La imagen dentro del modal */
 .zoom-modal-content {
     margin: auto;
     display: block;
-    max-width: 100%; /* Permite que la imagen ocupe todo el ancho del modal */
-    max-height: 100%; /* Permite que la imagen ocupe todo el alto del modal */
+    max-width: 90%;
+    max-height: 90%;
     transition: transform 0.3s ease-in-out;
 }
 
-/* El botón para cerrar el modal */
 .zoom-close-btn {
     position: absolute;
     top: 15px;
