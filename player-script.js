@@ -56,6 +56,10 @@ const UIElements = {
     hintText: document.getElementById('hint-text'),
     backToListFromNavBtn: document.getElementById('back-to-list-from-nav-btn'),
     backToListFromTrialBtn: document.getElementById('back-to-list-from-trial-btn'),
+    // NUEVOS ELEMENTOS PARA EL ZOOM DE IMÁGENES
+    zoomModal: document.getElementById('zoom-modal'),
+    zoomedImage: document.getElementById('zoomed-image'),
+    zoomCloseBtn: document.getElementById('zoom-close-btn'),
 };
 
 // Botones
@@ -117,20 +121,18 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn("ADVERTENCIA: Elemento #hint-modal no encontrado en el DOM.");
     }
+    
+    // Ocultar el modal de zoom al cargar la página
+    if (UIElements.zoomModal) {
+        UIElements.zoomModal.classList.remove('active');
+    }
 
-    // Los botones de cierre dentro de los modales también se ocultarán con el modal.
-    // Si estuvieran fuera, se les podría añadir la clase 'hidden' aquí.
     if (buttons.closeQrScanner) {
-        // Si el botón está dentro del modal, su visibilidad la controla el modal padre.
-        // Si estuviera fuera y se quisiera ocultar por defecto: buttons.closeQrScanner.classList.add('hidden');
         console.log("DEBUG: Botón de cerrar escáner encontrado.");
     }
     if (buttons.closeHint) {
-        // Si el botón está dentro del modal, su visibilidad la controla el modal padre.
-        // Si estuviera fuera y se quisiera ocultar por defecto: buttons.closeHint.classList.add('hidden');
         console.log("DEBUG: Botón de cerrar pista encontrado.");
     }
-
 
     initWelcomeScreen();
     attachEventListeners();
@@ -211,6 +213,18 @@ function attachEventListeners() {
         stopTrialTimer();
         startLocationTrials();
     });
+
+    // NUEVO: Listener para abrir el modal de zoom al hacer clic en imágenes
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('#narrative-image, #nav-location-image, #trial-image')) {
+            openZoomModal(e.target.src);
+        }
+    });
+    
+    // NUEVO: Listener para cerrar el modal de zoom con el botón
+    if (UIElements.zoomCloseBtn) {
+        UIElements.zoomCloseBtn.addEventListener('click', closeZoomModal);
+    }
 }
 
 /**
@@ -528,7 +542,6 @@ function startLocationTrials() {
 function advanceToNextTrial() {
     const location = getCurrentLocation();
     gameState.currentTrialIndex++; // Incrementa el índice para ir a la siguiente prueba
-
     if (gameState.currentTrialIndex >= location.trials.length) {
         // Si no hay más pruebas en esta ubicación, avanza a la siguiente ubicación
         advanceToNextLocation();
@@ -537,7 +550,6 @@ function advanceToNextTrial() {
         renderCurrentState();
     }
 }
-
 
 // =================================================================
 // VISTAS ESPECÍFICAS
@@ -548,7 +560,9 @@ function advanceToNextTrial() {
  * Esta función ahora se usa solo para la narrativa inicial del juego y de las ubicaciones.
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
-    UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
+    if (UIElements.narrativeText) {
+        UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
+    }
     if (UIElements.narrativeImage) { // Añadir comprobación
         UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
         UIElements.narrativeImage.src = imageUrl || '';
@@ -560,14 +574,11 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
             UIElements.narrativeAudio.play().catch(e => console.log("Audio play prevented by browser:", e));
         }, 100); // Pequeño retraso
     }
-
-
     // Clonar el botón para eliminar listeners anteriores y adjuntar el nuevo.
     const newContinueBtn = buttons.narrativeContinue.cloneNode(true);
     buttons.narrativeContinue.parentNode.replaceChild(newContinueBtn, buttons.narrativeContinue);
     buttons.narrativeContinue = newContinueBtn;
     buttons.narrativeContinue.addEventListener('click', onContinue);
-
     showGameView('narrative');
 }
 
@@ -576,7 +587,9 @@ function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
  */
 function showLocationNavigationView(location) {
     UIElements.navLocationName.textContent = `Próximo Destino: ${location.name}`;
-    UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
+    if (UIElements.navPreArrivalNarrative) {
+        UIElements.navPreArrivalNarrative.innerHTML = location.pre_arrival_narrative;
+    }
     if (UIElements.navLocationImage) { // Añadir comprobación
         UIElements.navLocationImage.classList.toggle('hidden', !location.image_url);
         UIElements.navLocationImage.src = location.image_url || '';
@@ -594,24 +607,14 @@ function showLocationNavigationView(location) {
             UIElements.navLocationAudio.currentTime = 0;
         }
     }
-
-
     showGameView('locationNav');
     initMap('location-map');
-
     const targetCoords = [location.latitude, location.longitude];
     targetMarker = L.marker(targetCoords).addTo(map)
         .bindPopup(location.name)
         .openPopup();
-    targetCircle = L.circle(targetCoords, {
-        radius: location.tolerance_meters,
-        color: 'orange',
-        fillColor: '#ffc107',
-        fillOpacity: 0.3
-    }).addTo(map);
-
+    targetCircle = L.circle(targetCoords, { radius: location.tolerance_meters, color: 'orange', fillColor: '#ffc107', fillOpacity: 0.3 }).addTo(map);
     startLocationTracking(location);
-
     if (gameState.gameData.adventure_type === 'selectable') {
         if (UIElements.backToListFromNavBtn) { // Añadir comprobación
             UIElements.backToListFromNavBtn.classList.remove('hidden');
@@ -629,618 +632,636 @@ function showLocationNavigationView(location) {
 function showListView(type, items, onSelect) {
     UIElements.listTitle.textContent = type === 'ubicaciones' ? 'Elige tu próximo destino' : 'Elige tu próxima prueba';
     UIElements.listItemsContainer.innerHTML = '';
-
     const sortedItems = [...items].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-
     sortedItems.forEach((item, index) => {
         if (type === 'pruebas' && isTrialCompleted(item.id)) return;
         if (type === 'ubicaciones' && isLocationCompleted(item.id)) return;
-
         const itemButton = document.createElement('button');
         itemButton.className = 'list-item-button action-button';
         itemButton.textContent = item.name || `Prueba ${item.order_index || index + 1}`;
         itemButton.onclick = () => onSelect(item);
         UIElements.listItemsContainer.appendChild(itemButton);
     });
-
     showGameView('list');
     // Asegurarse de que los botones de "volver al listado" estén ocultos en la vista de lista
-    if (UIElements.backToListFromNavBtn) {
+    if (UIElements.backToListFromNavBtn) { // Añadir comprobación
         UIElements.backToListFromNavBtn.classList.add('hidden');
     }
-    if (UIElements.backToListFromTrialBtn) {
+    if (UIElements.backToListFromTrialBtn) { // Añadir comprobación
         UIElements.backToListFromTrialBtn.classList.add('hidden');
     }
 }
 
 /**
- * Renderiza la vista de una prueba específica.
+ * Muestra la vista de una prueba específica.
+ * @param {object} trial - El objeto de la prueba a mostrar.
  */
 function renderTrial(trial) {
-    console.log("Rendering trial:", trial.id, trial.name); // DEBUG: Más específico
-    UIElements.trialNarrative.innerHTML = trial.narrative; // La narrativa se muestra aquí
-
-    // DEBUG: Log the value of UIElements.trialImage before attempting to use it
-    console.log("DEBUG: UIElements.trialImage before use (line 667 context):", UIElements.trialImage);
-
-    // CORRECCIÓN: Comprobar si UIElements.trialImage existe antes de acceder a classList
-    if (UIElements.trialImage) {
-        UIElements.trialImage.classList.toggle('hidden', !trial.image_url);
-        UIElements.trialImage.src = trial.image_url || '';
+    if (UIElements.trialNarrative) {
+        UIElements.trialNarrative.innerHTML = trial.narrative;
+    }
+    if (UIElements.trialContent) {
+        UIElements.trialContent.innerHTML = '';
+    }
+    
+    // Configuración de imagen y audio
+    if (trial.image_url && UIElements.trialImage) {
+        UIElements.trialImage.src = trial.image_url;
+        UIElements.trialImage.classList.remove('hidden');
     } else {
-        console.error("ERROR: El elemento UIElements.trialImage no fue encontrado en el DOM al renderizar la prueba. Asegúrate de que existe un <img id='trial-image'> en tu HTML y que su ID es correcto.");
+        UIElements.trialImage.classList.add('hidden');
+    }
+    if (trial.audio_url && UIElements.trialAudio) {
+        UIElements.trialAudio.src = trial.audio_url;
+        UIElements.trialAudio.classList.remove('hidden');
+    } else {
+        UIElements.trialAudio.classList.add('hidden');
     }
 
-    if (UIElements.trialAudio) { // Añadir comprobación
-        UIElements.trialAudio.src = trial.audio_url || '';
-        if (trial.audio_url) setTimeout(() => { // Pequeño retraso para audio de prueba
-            UIElements.trialAudio.play().catch(e => console.log("Audio play prevented."));
-        }, 100);
-    } else {
-        console.warn("ADVERTENCIA: Elemento UIElements.trialAudio no encontrado en el DOM.");
-    }
-
-
-    UIElements.hintCostDisplay.textContent = trial.hint_cost;
-    const hintsUsed = getHintsUsedForTrial(trial.id);
-    UIElements.hintBtn.disabled = hintsUsed >= trial.hint_count;
-
-    renderTrialContent(trial); // Esto renderiza la pregunta
-    startTrialTimer();
-    showGameView('trial');
-    console.log("DEBUG: Después de showGameView('trial'), #trial-view tiene la clase 'hidden':", UIElements.trial.classList.contains('hidden')); // DEBUG
-
-    const currentLocation = getCurrentLocation();
-    if (currentLocation && currentLocation.is_selectable_trials) {
-        if (UIElements.backToListFromTrialBtn) { // Añadir comprobación
-            UIElements.backToListFromTrialBtn.classList.remove('hidden');
-        }
-    } else {
-        if (UIElements.backToListFromTrialBtn) { // Añadir comprobación
-            UIElements.backToListFromTrialBtn.classList.add('hidden');
-        }
-    }
-    setupImageZoomListener(); // NUEVO: Configura el listener de zoom para la imagen de la prueba
-}
-
-/**
- * Renderiza el contenido específico del tipo de prueba (QR, GPS, Texto).
- */
-function renderTrialContent(trial) {
-    UIElements.trialContent.innerHTML = '';
-    // CORRECCIÓN: Usar buttons.validateAnswer en lugar de UIElements.validateAnswer
-    if (buttons.validateAnswer) { // Añadir comprobación por si el botón no existe
-        buttons.validateAnswer.classList.remove('hidden');
-    } else {
-        console.error("ERROR: El botón de validación (validateAnswer) no fue encontrado.");
-    }
-
-
+    // Lógica para mostrar el contenido de la prueba según el tipo
     switch (trial.trial_type) {
-        case 'qr':
-            const qrButton = document.createElement('button');
-            qrButton.textContent = '🔍 Escanear Código QR';
-            qrButton.className = 'action-button';
-            qrButton.onclick = startQrScanner;
-            UIElements.trialContent.appendChild(qrButton);
-            // CORRECCIÓN: Usar buttons.validateAnswer en lugar de UIElements.validateAnswer
-            if (buttons.validateAnswer) {
-                buttons.validateAnswer.classList.add('hidden');
-            }
+        case 'multiple_choice':
+            renderMultipleChoice(trial);
             break;
-
-        case 'gps':
-            UIElements.trialContent.innerHTML = `<p>Dirígete a las coordenadas indicadas. La prueba se validará automáticamente cuando estés en la zona.</p><div id="trial-gps-map" class="map-container"></div>`;
-            initMap('trial-gps-map');
-            const targetCoords = [trial.latitude, trial.longitude];
-            targetMarker = L.marker(targetCoords).addTo(map).bindPopup("Punto de la prueba");
-            targetCircle = L.circle(targetCoords, { radius: trial.tolerance_meters }).addTo(map);
-            startLocationTracking(trial, true);
-            // CORRECCIÓN: Usar buttons.validateAnswer en lugar de UIElements.validateAnswer
-            if (buttons.validateAnswer) {
-                buttons.validateAnswer.classList.add('hidden');
-            }
+        case 'text_input':
+            renderTextInput(trial);
             break;
-
-        case 'text':
-            renderTextTrial(trial);
-            break;
-    }
-}
-
-/**
- * Renderiza los campos para una prueba de tipo Texto.
- */
-function renderTextTrial(trial) {
-    const question = document.createElement('p');
-    question.innerHTML = trial.question;
-    question.className = 'trial-question';
-    UIElements.trialContent.appendChild(question);
-
-    switch (trial.answer_type) {
-        case 'single_choice':
-        case 'numeric':
-            const textInput = document.createElement('input');
-            textInput.type = trial.answer_type === 'numeric' ? 'number' : 'text';
-            textInput.id = 'text-answer-input';
-            textInput.placeholder = 'Escribe tu respuesta aquí';
-            UIElements.trialContent.appendChild(textInput);
-            break;
-
-        case 'multiple_options':
-            const optionsContainer = document.createElement('div');
-            optionsContainer.className = 'text-options-container';
-            trial.options.forEach(option => {
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'text-option';
-                optionDiv.innerHTML = option;
-                optionDiv.dataset.value = option;
-                optionDiv.onclick = () => {
-                    document.querySelectorAll('.text-option').forEach(el => el.classList.remove('selected'));
-                    optionDiv.classList.add('selected');
-                };
-                optionsContainer.appendChild(optionDiv);
-            });
-            UIElements.trialContent.appendChild(optionsContainer);
-            break;
-
         case 'ordering':
-            showAlert('Prueba de ordenación pendiente de implementación.');
+            renderOrdering(trial);
+            break;
+        case 'qr_scan':
+            renderQrScan(trial);
+            break;
+        default:
+            UIElements.trialContent.innerHTML = '<p>Tipo de prueba no soportado.</p>';
             break;
     }
-}
-
-
-// =================================================================
-// LÓGICA DE VALIDACIÓN Y GAMIFICACIÓN
-// =================================================================
-
-/**
- * Valida la respuesta para la prueba actual.
- */
-function validateCurrentAnswer() {
-    const trial = getCurrentTrial();
-    if (!trial) return;
-
-    let userAnswer = '';
-    let isCorrect = false;
-
-    if (trial.trial_type === 'text') {
-        switch (trial.answer_type) {
-            case 'single_choice':
-            case 'numeric':
-                userAnswer = document.getElementById('text-answer-input').value.trim();
-                isCorrect = userAnswer.toLowerCase() === trial.correct_answer.toLowerCase();
-                break;
-            case 'multiple_options':
-                const selectedOption = document.querySelector('.text-option.selected');
-                userAnswer = selectedOption ? selectedOption.dataset.value : '';
-                isCorrect = userAnswer === trial.correct_answer;
-                break;
-            default:
-                showAlert('Tipo de respuesta no soportado aún.', 'error');
-                return;
-        }
-    }
-    if (trial.trial_type === 'qr' || trial.trial_type === 'gps') {
-        showAlert('Esta prueba se valida automáticamente.', 'info');
-        return;
-    }
-
-    processAnswer(isCorrect);
+    
+    // Configurar el botón de pista
+    setupHintButton(trial);
+    
+    showGameView('trial');
+    startTrialTimer();
 }
 
 /**
- * Procesa el resultado de una validación.
+ * Abre el modal de zoom con la imagen clickeada.
+ * @param {string} imageUrl - La URL de la imagen a mostrar.
  */
-function processAnswer(isCorrect) {
-    const trial = getCurrentTrial();
-    if (!trial) return;
+function openZoomModal(imageUrl) {
+    if (UIElements.zoomModal && UIElements.zoomedImage) {
+        UIElements.zoomedImage.src = imageUrl;
+        UIElements.zoomModal.classList.add('active');
+    }
+}
 
-    if (isCorrect) {
-        // ✅ El cronómetro solo se detiene al responder correctamente.
-        stopTrialTimer();
+/**
+ * Cierra el modal de zoom.
+ */
+function closeZoomModal() {
+    if (UIElements.zoomModal) {
+        UIElements.zoomModal.classList.remove('active');
+        UIElements.zoomedImage.src = '';
+    }
+}
 
-        const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
-        const hintsUsed = getHintsUsedForTrial(trial.id);
-        const baseScore = gameState.gameData.initial_score_per_trial;
-        const timePenalty = timeTaken;
-        const hintPenalty = hintsUsed * trial.hint_cost;
-        const trialScore = Math.max(0, baseScore - timePenalty - hintPenalty);
-
-        gameState.totalScore += trialScore;
-        UIElements.scoreDisplay.textContent = gameState.totalScore;
-
-        gameState.progressLog.push({
-            trialId: trial.id,
-            completedAt: new Date().toISOString(),
-            timeTaken: timeTaken,
-            score: trialScore,
-            hintsUsed: hintsUsed
+/**
+ * Renderiza una prueba de opción múltiple.
+ * @param {object} trial - El objeto de la prueba.
+ */
+function renderMultipleChoice(trial) {
+    const options = JSON.parse(trial.options);
+    options.forEach(option => {
+        const optionBtn = document.createElement('button');
+        optionBtn.className = 'text-option';
+        optionBtn.textContent = option.text;
+        optionBtn.dataset.answer = option.is_correct;
+        optionBtn.addEventListener('click', () => {
+            document.querySelectorAll('.text-option').forEach(btn => btn.classList.remove('selected'));
+            optionBtn.classList.add('selected');
         });
-
-        showAlert('¡Correcto!', 'success', UIElements.trialContent); // Pasa trialContent como padre
-        syncStateWithSupabase();
-
-        // Check if all trials in the current location are completed
-        const currentLocation = getCurrentLocation();
-        if (isLocationCompleted(currentLocation.id)) {
-            setTimeout(() => {
-                advanceToNextLocation(); // Move to next location if current one is complete
-            }, 1500);
-        } else {
-            // If location not complete, decide based on trial type
-            setTimeout(() => {
-                if (currentLocation.is_selectable_trials) {
-                    startLocationTrials(); // Go back to list of trials
-                } else {
-                    advanceToNextTrial(); // Go to next linear trial
-                }
-            }, 1500);
-        }
-
-    } else {
-        showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
-        // 🚨 CORRECCIÓN: No se realiza ninguna acción que detenga o reinicie el cronómetro.
-        // El cronómetro continúa ejecutándose aquí.
-    }
+        UIElements.trialContent.appendChild(optionBtn);
+    });
+    buttons.validateAnswer.classList.remove('hidden');
 }
-
 
 /**
- * Solicita una pista para la prueba actual.
+ * Renderiza una prueba de entrada de texto.
+ * @param {object} trial - El objeto de la prueba.
  */
-function requestHint() {
-    console.log("DEBUG: Función requestHint() llamada.");
-    const trial = getCurrentTrial();
-    if (!trial) return;
-
-    let hintsUsedData = gameState.hints_used_per_trial?.find(p => p.trialId === trial.id);
-    if (!hintsUsedData) {
-        hintsUsedData = { trialId: trial.id, count: 0 };
-        if (!gameState.hints_used_per_trial) gameState.hints_used_per_trial = [];
-        gameState.hints_used_per_trial.push(hintsUsedData);
-    }
-
-    if (hintsUsedData.count >= trial.hint_count) {
-        showAlert('No quedan más pistas para esta prueba.', 'error');
-        return;
-    }
-
-    const hintNumber = hintsUsedData.count + 1;
-    const hintText = trial[`hint${hintNumber}`];
-
-    if (!hintText) {
-        showAlert('No hay texto para esta pista.', 'error');
-        return;
-    }
-
-    UIElements.hintText.innerHTML = hintText;
-    // Modificado para usar style.display directamente
-    if (UIElements.hintModal) {
-        console.log("DEBUG: Intentando mostrar el modal de pista. Display antes:", UIElements.hintModal.style.display);
-        UIElements.hintModal.style.display = 'flex'; // Mostrar directamente
-        console.log("DEBUG: Modal de pista mostrado directamente. Display después:", UIElements.hintModal.style.display);
-    }
-
-
-    gameState.totalScore = Math.max(0, gameState.totalScore - trial.hint_cost);
-    UIElements.scoreDisplay.textContent = gameState.totalScore;
-    hintsUsedData.count++;
-    gameState.globalHintsUsed++;
-
-    UIElements.hintBtn.disabled = hintsUsedData.count >= trial.hint_count;
-
-    saveState();
-    syncStateWithSupabase();
+function renderTextInput(trial) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'text-answer-input';
+    input.placeholder = 'Escribe tu respuesta aquí...';
+    UIElements.trialContent.appendChild(input);
+    buttons.validateAnswer.classList.remove('hidden');
 }
-
-
-// =================================================================
-// FUNCIONES DE TEMPORIZADOR
-// =================================================================
 
 /**
- * Actualiza la visualización del tiempo total acumulado de las pruebas.
+ * Renderiza una prueba de ordenación.
+ * @param {object} trial - El objeto de la prueba.
  */
-function updateTotalTimeDisplay() {
-    const totalTimeTrials = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
-    const minutes = String(Math.floor(totalTimeTrials / 60)).padStart(2, '0');
-    const seconds = String(totalTimeTrials % 60).padStart(2, '0');
-    UIElements.totalTimerDisplay.textContent = `${minutes}:${seconds}`;
+function renderOrdering(trial) {
+    const items = JSON.parse(trial.options);
+    const container = document.createElement('div');
+    container.className = 'ordering-container';
+    container.id = 'ordering-container';
+    items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'ordering-item';
+        itemDiv.textContent = item.text;
+        itemDiv.setAttribute('draggable', true);
+        itemDiv.dataset.order = item.order;
+        itemDiv.addEventListener('dragstart', handleDragStart);
+        itemDiv.addEventListener('dragover', handleDragOver);
+        itemDiv.addEventListener('dragleave', handleDragLeave);
+        itemDiv.addEventListener('drop', handleDrop);
+        itemDiv.addEventListener('dragend', handleDragEnd);
+        container.appendChild(itemDiv);
+    });
+    UIElements.trialContent.appendChild(container);
+    buttons.validateAnswer.classList.remove('hidden');
 }
 
+let draggedItem = null;
 
-function startTrialTimer() {
-    if (trialTimerInterval) clearInterval(trialTimerInterval);
-    lastTrialStartTime = new Date();
-    trialTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((new Date() - lastTrialStartTime) / 1000);
-        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
-        const seconds = String(elapsed % 60).padStart(2, '0');
-        UIElements.trialTimerDisplay.textContent = `${minutes}:${seconds}`;
-    }, 1000);
+function handleDragStart(e) {
+    draggedItem = this;
+    setTimeout(() => this.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
 }
 
-function stopTrialTimer() {
-    clearInterval(trialTimerInterval);
-    UIElements.trialTimerDisplay.textContent = '00:00';
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (this !== draggedItem) {
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave() {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.stopPropagation();
+    if (this !== draggedItem) {
+        const parent = this.parentNode;
+        parent.insertBefore(draggedItem, this.nextSibling);
+    }
+    this.classList.remove('drag-over');
+}
+
+function handleDragEnd() {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.ordering-item').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+    draggedItem = null;
+}
+
+/**
+ * Renderiza una prueba de escaneo de QR.
+ * @param {object} trial - El objeto de la prueba.
+ */
+function renderQrScan(trial) {
+    const scanBtn = document.createElement('button');
+    scanBtn.textContent = 'Escanear QR';
+    scanBtn.className = 'action-button';
+    scanBtn.onclick = () => startQrScanner();
+    UIElements.trialContent.appendChild(scanBtn);
+    buttons.validateAnswer.classList.add('hidden');
 }
 
 
 // =================================================================
-// FUNCIONES DE GEOLOCALIZACIÓN Y MAPA (Leaflet)
+// LÓGICA DE GEOLOCALIZACIÓN Y MAPA
 // =================================================================
 
 /**
- * Inicializa un mapa Leaflet en el contenedor especificado.
+ * Inicializa el mapa de Leaflet.
  */
-function initMap(containerId) {
+function initMap(mapId) {
     if (map) {
         map.remove();
-        map = null;
     }
-    map = L.map(containerId).setView([43.535, -5.661], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    if (!playerMarker) {
-        playerMarker = L.marker([0, 0], { opacity: 0.7, icon: L.divIcon({ className: 'player-marker-icon', html: '<div style="background-color: blue; width: 15px; height: 15px; border-radius: 50%;"></div>' }) }).addTo(map).bindPopup("¡Estás aquí!");
-    } else {
-        playerMarker.addTo(map);
-    }
+    map = L.map(mapId).setView([43.535, -5.661], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
 }
 
 /**
- * Inicia el seguimiento de la ubicación del jugador.
+ * Inicia el seguimiento de la ubicación del usuario.
+ * @param {object} targetLocation - El objeto de la ubicación de destino.
  */
-function startLocationTracking(target, isTrialValidation = false) {
-    if (!navigator.geolocation) {
-        showAlert('Geolocalización no soportada por tu navegador.', 'error');
-        return;
+function startLocationTracking(targetLocation) {
+    if (watchPositionId) {
+        navigator.geolocation.clearWatch(watchPositionId);
     }
-
-    const targetLatLng = L.latLng(target.latitude, target.longitude);
-
-    if (watchPositionId) navigator.geolocation.clearWatch(watchPositionId);
-
     watchPositionId = navigator.geolocation.watchPosition(
         (position) => {
-            const playerLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const playerCoords = [lat, lon];
+            const targetCoords = [targetLocation.latitude, targetLocation.longitude];
+            const distance = getDistance(playerCoords, targetCoords);
 
+            UIElements.distanceInfo.textContent = `Distancia: ${distance.toFixed(0)} metros`;
             if (playerMarker) {
-                playerMarker.setLatLng(playerLatLng);
+                playerMarker.setLatLng(playerCoords);
             } else {
-                playerMarker = L.marker(playerLatLng).addTo(map).bindPopup("¡Estás aquí!");
+                playerMarker = L.marker(playerCoords).addTo(map).bindPopup('Tú estás aquí').openPopup();
             }
+            map.panTo(playerCoords);
 
-            if (targetMarker && playerMarker) {
-                const bounds = L.latLngBounds(playerLatLng, targetLatLng);
-                map.fitBounds(bounds.pad(0.2));
-            } else {
-                map.setView(playerLatLng, map.getZoom());
-            }
-
-            const distance = playerLatLng.distanceTo(targetLatLng);
-
-            if (isTrialValidation) {
-                if (distance <= target.tolerance_meters) {
-                    playArrivalSound();
-                    processAnswer(true);
-                    stopLocationTracking();
-                }
-            } else {
-                UIElements.distanceInfo.textContent = `Distancia al objetivo: ${distance.toFixed(0)} metros`;
-                if (distance <= target.tolerance_meters) {
-                    playArrivalSound();
-                    showAlert('¡Has llegado a la ubicación!', 'success');
-                    stopLocationTracking();
-                    renderCurrentState();
-                }
+            // Verificar si el jugador está dentro del rango
+            if (distance <= targetLocation.tolerance_meters) {
+                showAlert('¡Has llegado a tu destino!', 'success');
+                stopLocationTracking();
+                startLocationTrials();
             }
         },
         (error) => {
-            console.error("Geolocation error:", error);
-            UIElements.distanceInfo.textContent = 'No se puede obtener tu ubicación.';
-            if (isTrialValidation) {
-                showAlert('Error de GPS: No se pudo obtener tu ubicación para validar la prueba.', 'error');
-            }
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            console.error('Error getting location:', error);
+            showAlert('Error al obtener la ubicación. Asegúrate de tener el GPS activado.', 'error', document.getElementById('location-navigation-view'));
+        }, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        }
     );
 }
 
+/**
+ * Detiene el seguimiento de la ubicación.
+ */
 function stopLocationTracking() {
     if (watchPositionId) {
         navigator.geolocation.clearWatch(watchPositionId);
         watchPositionId = null;
     }
-    if (map && playerMarker) {
-        map.removeLayer(playerMarker);
-        playerMarker = null;
-    }
-    if (map && targetMarker) {
-        map.removeLayer(targetMarker);
-        targetMarker = null;
-    }
-    if (map && targetCircle) {
-        map.removeLayer(targetCircle);
-        targetCircle = null;
-    }
-    if (UIElements.navLocationAudio) {
-        UIElements.navLocationAudio.pause();
-        UIElements.navLocationAudio.currentTime = 0;
-    }
-}
-
-
-// =================================================================
-// FUNCIONES DE ESCÁNER QR
-// =================================================================
-
-function startQrScanner() {
-    // Modificado para usar style.display directamente
-    if (UIElements.qrScannerModal) {
-        UIElements.qrScannerModal.style.display = 'flex'; // Mostrar directamente
-    } else {
-        console.warn("ADVERTENCIA: Elemento #qr-scanner-modal no encontrado en el DOM.");
-    }
-
-
-    if (!html5QrCode) {
-        try {
-            html5QrCode = new Html5Qrcode("qr-reader");
-        } catch (e) {
-            console.error("Error al inicializar Html5Qrcode:", e);
-            showAlert('Error al preparar el escáner QR. Intenta de nuevo.', 'error');
-            return;
+    if (map) {
+        if (playerMarker) {
+            map.removeLayer(playerMarker);
+            playerMarker = null;
+        }
+        if (targetMarker) {
+            map.removeLayer(targetMarker);
+            targetMarker = null;
+        }
+        if (targetCircle) {
+            map.removeLayer(targetCircle);
+            targetCircle = null;
         }
     }
-
-    html5QrCode.start(
-        { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-        },
-        (decodedText, decodedResult) => {
-            stopQrScanner();
-            const trial = getCurrentTrial();
-            const isCorrect = decodedText === trial.qr_content;
-            processAnswer(isCorrect);
-        },
-        (errorMessage) => {
-            // Ignorar errores
-        })
-        .catch((err) => {
-            console.error("Error al iniciar la cámara del escáner QR:", err);
-            showAlert('No se pudo iniciar la cámara. Asegúrate de dar permisos o intenta con otro navegador.', 'error');
-            stopQrScanner();
-        });
 }
 
+/**
+ * Calcula la distancia entre dos coordenadas en metros (fórmula de Haversine).
+ */
+function getDistance(coord1, coord2) {
+    const R = 6371e3; // Radio de la Tierra en metros
+    const lat1 = coord1[0] * Math.PI / 180;
+    const lat2 = coord2[0] * Math.PI / 180;
+    const deltaLat = (coord2[0] - coord1[0]) * Math.PI / 180;
+    const deltaLon = (coord2[1] - coord1[1]) * Math.PI / 180;
+
+    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) *
+        Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+}
+
+
+// =================================================================
+// LÓGICA DE PRUEBAS
+// =================================================================
+
+/**
+ * Valida la respuesta de la prueba actual.
+ */
+function validateCurrentAnswer() {
+    const trial = getCurrentTrial();
+    if (!trial) return;
+
+    let isCorrect = false;
+    let givenAnswer = '';
+
+    switch (trial.trial_type) {
+        case 'multiple_choice':
+            const selectedOption = document.querySelector('.text-option.selected');
+            if (selectedOption) {
+                givenAnswer = selectedOption.textContent;
+                isCorrect = selectedOption.dataset.answer === 'true';
+            } else {
+                showAlert('Por favor, selecciona una opción.', 'error');
+                return;
+            }
+            break;
+        case 'text_input':
+            const textInput = document.getElementById('text-answer-input');
+            givenAnswer = textInput.value.trim();
+            if (givenAnswer) {
+                const correctAnswers = JSON.parse(trial.options).map(o => o.text.toLowerCase());
+                isCorrect = correctAnswers.includes(givenAnswer.toLowerCase());
+            } else {
+                showAlert('Por favor, introduce tu respuesta.', 'error');
+                return;
+            }
+            break;
+        case 'ordering':
+            const orderingItems = document.querySelectorAll('.ordering-item');
+            const userOrder = Array.from(orderingItems).map(item => parseInt(item.dataset.order));
+            const correctOrder = JSON.parse(trial.options).map(o => o.order);
+            isCorrect = JSON.stringify(userOrder) === JSON.stringify(correctOrder);
+            givenAnswer = userOrder.join(', ');
+            break;
+        case 'qr_scan':
+            // La validación de QR se maneja en el callback del escáner
+            return;
+    }
+
+    processAnswer(trial, isCorrect, givenAnswer);
+}
+
+/**
+ * Procesa la respuesta de una prueba y actualiza el estado del juego.
+ * @param {object} trial - El objeto de la prueba.
+ * @param {boolean} isCorrect - Si la respuesta es correcta.
+ * @param {string} givenAnswer - La respuesta dada por el usuario.
+ */
+function processAnswer(trial, isCorrect, givenAnswer) {
+    stopTrialTimer();
+
+    const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
+    const currentScore = isCorrect ? trial.score : 0;
+    const hintsUsed = getHintsUsedForTrial(trial.id);
+    const finalScore = currentScore > 0 ? Math.max(0, currentScore - (hintsUsed * 10)) : 0; // Penalización por pistas
+
+    if (isCorrect) {
+        showAlert('¡Respuesta correcta!', 'success', UIElements.trialContent);
+        gameState.totalScore += finalScore;
+        UIElements.scoreDisplay.textContent = gameState.totalScore;
+    } else {
+        showAlert('Respuesta incorrecta. Inténtalo de nuevo.', 'error', UIElements.trialContent);
+        setTimeout(() => startTrialTimer(), 2000); // Reinicia el temporizador si falla
+        return; // No finaliza la prueba si la respuesta es incorrecta
+    }
+
+    // Registrar el progreso
+    gameState.progressLog.push({
+        trialId: trial.id,
+        locationId: getCurrentLocation().id,
+        timeTaken: timeTaken,
+        score: finalScore,
+        givenAnswer: givenAnswer,
+        isCorrect: isCorrect
+    });
+    saveState();
+    syncStateWithSupabase();
+
+    if (getCurrentLocation().is_selectable_trials) {
+        // Para pruebas seleccionables, volvemos al listado
+        UIElements.backToListFromTrialBtn.classList.remove('hidden');
+    } else {
+        // Para pruebas lineales, pasamos automáticamente a la siguiente
+        setTimeout(() => advanceToNextTrial(), 2000);
+    }
+}
+
+
+/**
+ * Inicia el escáner de códigos QR.
+ */
+function startQrScanner() {
+    UIElements.qrScannerModal.style.display = 'flex';
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => console.log("QR scanner stopped")).catch(err => console.log("Error stopping QR scanner:", err));
+        html5QrCode = null;
+    }
+    html5QrCode = new Html5Qrcode("qr-reader");
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        const trial = getCurrentTrial();
+        stopQrScanner();
+        if (decodedText.toLowerCase() === trial.answer_text.toLowerCase()) {
+            processAnswer(trial, true, decodedText);
+        } else {
+            showAlert('Código QR incorrecto. Inténtalo de nuevo.', 'error', UIElements.trialContent);
+        }
+    };
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+        .catch(err => console.log(`Error starting QR scanner: ${err}`));
+}
+
+/**
+ * Detiene el escáner de códigos QR.
+ */
 function stopQrScanner() {
-    if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(err => console.error("Error al detener el escáner:", err));
-    }
-    // Modificado para usar style.display directamente
-    if (UIElements.qrScannerModal) {
-        UIElements.qrScannerModal.style.display = 'none'; // Ocultar directamente
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            UIElements.qrScannerModal.style.display = 'none';
+        }).catch(err => {
+            console.error("Error stopping QR scanner:", err);
+            UIElements.qrScannerModal.style.display = 'none';
+        });
+    } else {
+        UIElements.qrScannerModal.style.display = 'none';
     }
 }
 
+/**
+ * Solicita una pista para la prueba actual.
+ */
+async function requestHint() {
+    const trial = getCurrentTrial();
+    const hintCost = 10;
+    if (gameState.totalScore < hintCost) {
+        showAlert('Puntuación insuficiente para una pista.', 'error', UIElements.trialContent);
+        return;
+    }
 
-// =================================================================
-// FIN DEL JUEGO
-// =================================================================
+    const hintsUsed = getHintsUsedForTrial(trial.id);
+    if (hintsUsed > 0) {
+        showAlert('Ya has solicitado una pista para esta prueba.', 'error', UIElements.trialContent);
+        return;
+    }
 
+    const { data: hintData, error } = await supabase
+        .from('hints')
+        .select('text')
+        .eq('trial_id', trial.id)
+        .order('order_index', { ascending: true })
+        .limit(1)
+        .single();
+
+    if (error || !hintData) {
+        showAlert('No hay pistas disponibles para esta prueba.', 'error', UIElements.trialContent);
+        return;
+    }
+
+    gameState.totalScore -= hintCost;
+    UIElements.scoreDisplay.textContent = gameState.totalScore;
+    const hintLog = gameState.hints_used_per_trial || [];
+    const trialHintLogIndex = hintLog.findIndex(h => h.trialId === trial.id);
+    if (trialHintLogIndex !== -1) {
+        hintLog[trialHintLogIndex].count++;
+    } else {
+        hintLog.push({ trialId: trial.id, count: 1 });
+    }
+    gameState.hints_used_per_trial = hintLog;
+    gameState.globalHintsUsed++;
+    saveState();
+    syncStateWithSupabase();
+
+    UIElements.hintText.textContent = hintData.text;
+    UIElements.hintModal.style.display = 'flex';
+}
+
+/**
+ * Finaliza el juego y muestra el ranking.
+ */
 async function endGame() {
-    stopLocationTracking();
+    showScreen('loading');
+    stopTrialTimer();
 
-    const finalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
-    gameState.totalTimeSeconds = finalTimeSeconds;
-    gameState.isCompleted = true;
-
-    await syncStateWithSupabase();
-
-    UIElements.finalTeamName.textContent = gameState.teamName;
-    UIElements.finalScore.textContent = gameState.totalScore;
-    const minutes = String(Math.floor(finalTimeSeconds / 60)).padStart(2, '0');
-    const seconds = String(finalTimeSeconds % 60).padStart(2, '0');
-    UIElements.finalTime.textContent = `${minutes}m ${seconds}s`;
-
-    showScreen('gameOver');
-    loadFinalRanking();
-}
-
-async function loadFinalRanking() {
-    UIElements.finalRankingContainer.innerHTML = '<p>Cargando ranking...</p>';
     try {
-        const { data, error } = await supabase
+        await syncStateWithSupabase();
+        const { data: rankingData, error } = await supabase
             .from('teams')
             .select('name, total_score, total_time_seconds')
             .eq('game_id', gameState.gameId)
             .eq('is_completed', true)
             .order('total_score', { ascending: false })
-            .order('total_time_seconds', { ascending: true })
-            .limit(10);
+            .order('total_time_seconds', { ascending: true });
 
         if (error) throw error;
 
+        UIElements.finalTeamName.textContent = gameState.teamName;
+        UIElements.finalScore.textContent = gameState.totalScore;
+        UIElements.finalTime.textContent = formatTime(gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0));
+
         UIElements.finalRankingContainer.innerHTML = '';
-        if (data.length === 0) {
-            UIElements.finalRankingContainer.innerHTML = '<p>Nadie ha completado este juego todavía.</p>';
-        } else {
-            data.forEach((team, index) => {
-                const item = document.createElement('div');
-                item.className = 'ranking-item';
-                if (team.name === gameState.teamName) {
-                    item.classList.add('current-team');
-                }
-                const minutes = String(Math.floor(team.total_time_seconds / 60)).padStart(2, '0');
-                const seconds = String(team.total_time_seconds % 60).padStart(2, '0');
-                item.innerHTML = `<span>${index + 1}. ${team.name}</span><span>${team.total_score} pts (${minutes}:${seconds})</span>`;
-                UIElements.finalRankingContainer.appendChild(item);
-            });
-        }
-
+        rankingData.forEach((team, index) => {
+            const rankingItem = document.createElement('div');
+            rankingItem.className = 'ranking-item';
+            rankingItem.innerHTML = `
+                <span>${index + 1}. ${team.name}</span>
+                <span>${team.total_score} pts. - ${formatTime(team.total_time_seconds)}</span>
+            `;
+            UIElements.finalRankingContainer.appendChild(rankingItem);
+        });
     } catch (error) {
-        console.error("Error loading final ranking:", error);
-        UIElements.finalRankingContainer.innerHTML = '<p>No se pudo cargar el ranking.</p>';
+        console.error("Error fetching ranking:", error);
+        showAlert('Error al cargar el ranking.', 'error');
     }
+    showScreen('gameOver');
 }
-
 
 // =================================================================
-// FUNCIONES DE UTILIDAD
+// UTILIDADES Y TEMPORIZADORES
 // =================================================================
 
-function playArrivalSound() {
-    // Reemplazar la implementación de audio actual con una que use un sonido de alerta más fuerte y estridente.
-    // Esto se logra creando un nuevo AudioContext y un oscilador con un tipo de onda 'sawtooth' y una frecuencia más alta para un sonido más penetrante.
-    // Además, se ajusta la ganancia para que sea más notable.
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.type = 'sawtooth'; // Tipo de onda que produce un sonido más "áspero" o estridente
-        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime); // Frecuencia más alta para un tono más agudo (1000 Hz)
-        gainNode.gain.setValueAtTime(0.8, audioContext.currentTime); // Ganancia inicial más fuerte
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); // Decay rápido pero audible
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5); // Duración del sonido
-    } catch (e) {
-        console.error("No se pudo reproducir el sonido de llegada:", e);
-    }
-}
-
-
-function getCurrentTrial() {
-    if (gameState.currentLocationIndex === -1 || gameState.currentTrialIndex === -1) return null;
-    const location = gameState.gameData.locations[gameState.currentLocationIndex];
-    if (!location || !location.trials || gameState.currentTrialIndex >= location.trials.length) return null;
-    return location.trials[gameState.currentTrialIndex];
-}
-
-function getCurrentLocation() {
-    if (gameState.currentLocationIndex === -1) return null;
-    return gameState.gameData.locations[gameState.currentLocationIndex];
-}
-
-function isTrialCompleted(trialId) {
-    return gameState.progressLog.some(log => log.trialId === trialId);
+/**
+ * Inicia el temporizador de la prueba actual.
+ */
+function startTrialTimer() {
+    lastTrialStartTime = new Date();
+    stopTrialTimer(); // Asegurar que no haya múltiples temporizadores
+    trialTimerInterval = setInterval(() => {
+        const timeElapsed = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
+        UIElements.trialTimerDisplay.textContent = formatTime(timeElapsed);
+    }, 1000);
 }
 
 /**
- * Comprueba si todos las pruebas dentro de una ubicación han sido completadas.
+ * Detiene el temporizador de la prueba actual.
  */
+function stopTrialTimer() {
+    if (trialTimerInterval) {
+        clearInterval(trialTimerInterval);
+        trialTimerInterval = null;
+    }
+}
+
+/**
+ * Actualiza el temporizador total del juego.
+ */
+function updateTotalTimeDisplay() {
+    if (totalTimerInterval) {
+        clearInterval(totalTimerInterval);
+    }
+    totalTimerInterval = setInterval(() => {
+        const totalTimeSeconds = gameState.progressLog.reduce((sum, entry) => sum + entry.timeTaken, 0);
+        UIElements.totalTimerDisplay.textContent = formatTime(totalTimeSeconds);
+    }, 1000);
+}
+
+/**
+ * Formatea un número de segundos en un formato de tiempo (HH:MM:SS).
+ * @param {number} seconds - El número de segundos.
+ * @returns {string} El tiempo formateado.
+ */
+function formatTime(seconds) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+}
+
+/**
+ * Muestra una alerta temporal.
+ * @param {string} message - El mensaje a mostrar.
+ * @param {string} type - Tipo de alerta ('success', 'error').
+ * @param {HTMLElement} [parentElement] - El elemento padre donde se mostrará la alerta.
+ */
+function showAlert(message, type = 'info', parentElement = document.body) {
+    const alertDiv = UIElements.appAlert;
+    if (!alertDiv) return;
+
+    // Limpiar clases anteriores y establecer el nuevo mensaje y tipo
+    alertDiv.textContent = message;
+    alertDiv.className = 'app-alert';
+    if (type) {
+        alertDiv.classList.add(type);
+    }
+    
+    // Si ya hay una alerta, la ocultamos y volvemos a mostrarla para reiniciar el temporizador
+    clearTimeout(alertDiv.hideTimeout);
+
+    // Muestra la alerta
+    alertDiv.classList.add('show');
+
+    // Configura el temporizador para ocultar la alerta
+    alertDiv.hideTimeout = setTimeout(() => {
+        alertDiv.classList.remove('show');
+    }, 3000); // 3 segundos
+}
+
+
+// =================================================================
+// FUNCIONES DE AYUDA Y ESTADO
+// =================================================================
+
+function getCurrentLocation() {
+    return gameState.gameData.locations[gameState.currentLocationIndex];
+}
+
+function getCurrentTrial() {
+    const location = getCurrentLocation();
+    if (!location || !location.trials) return null;
+    return location.trials[gameState.currentTrialIndex];
+}
+
+function isTrialCompleted(trialId) {
+    return gameState.progressLog.some(p => p.trialId === trialId);
+}
+
 function isLocationCompleted(locationId) {
     const location = gameState.gameData.locations.find(loc => loc.id === locationId);
     if (!location || !location.trials) return false;
@@ -1250,92 +1271,4 @@ function isLocationCompleted(locationId) {
 function getHintsUsedForTrial(trialId) {
     const hintData = gameState.hints_used_per_trial?.find(p => p.trialId === trialId);
     return hintData ? hintData.count : 0;
-}
-
-/**
- * Muestra una alerta temporal al usuario.
- * @param {string} message - El mensaje a mostrar.
- * @param {string} type - Tipo de alerta ('info', 'success', 'error').
- * @param {HTMLElement} [parentElement=document.body] - El elemento padre donde se añadirá la alerta.
- */
-function showAlert(message, type = 'info', parentElement = document.body) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `app-alert ${type}`;
-    alertDiv.textContent = message;
-
-    // Append to the specified parent or fallback to body
-    parentElement.appendChild(alertDiv);
-
-    // Trigger the 'show' class for the fade-in effect
-    setTimeout(() => {
-        alertDiv.classList.add('show');
-    }, 10);
-
-    // Set timeout to remove the alert after 3 seconds
-    setTimeout(() => {
-        alertDiv.classList.remove('show'); // Start fade out
-        // Remove from DOM after transition
-        const onTransitionEnd = () => {
-            alertDiv.removeEventListener('transitionend', onTransitionEnd);
-            alertDiv.remove();
-        };
-        alertDiv.addEventListener('transitionend', onTransitionEnd);
-    }, 3000);
-}
-
-/**
- * NUEVO: Configura el listener de clic para la imagen de la prueba para hacer zoom.
- */
-function setupImageZoomListener() {
-    if (!UIElements.trialImage) {
-        return;
-    }
-
-    // Asegurarse de que el listener no se añade varias veces
-    UIElements.trialImage.removeEventListener('click', showZoomedImage);
-    UIElements.trialImage.addEventListener('click', showZoomedImage);
-
-    // Función para mostrar la imagen en un modal
-    function showZoomedImage() {
-        const imageUrl = UIElements.trialImage.src;
-        if (!imageUrl) return;
-
-        let modal = document.querySelector('.zoom-modal');
-        let modalImg = document.querySelector('.zoom-modal-content');
-
-        if (!modal) {
-            // Si el modal no existe, lo creamos
-            modal = document.createElement('div');
-            modal.className = 'zoom-modal';
-            modal.id = 'image-zoom-modal'; // Darle un ID para referenciarlo
-
-            const closeBtn = document.createElement('span');
-            closeBtn.className = 'zoom-close-btn';
-            closeBtn.innerHTML = '&times;';
-            modal.appendChild(closeBtn);
-            closeBtn.onclick = () => hideZoomedImage(modal);
-
-            modalImg = document.createElement('img');
-            modalImg.className = 'zoom-modal-content';
-            modal.appendChild(modalImg);
-
-            document.body.appendChild(modal);
-
-            // Cerrar el modal al hacer clic en el overlay
-            modal.onclick = (e) => {
-                if (e.target === modal) {
-                    hideZoomedImage(modal);
-                }
-            };
-        }
-
-        modalImg.src = imageUrl;
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Evita el scroll del fondo
-    }
-
-    function hideZoomedImage(modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
 }
