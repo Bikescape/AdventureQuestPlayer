@@ -46,10 +46,8 @@
         </section>
 
         <section id="game-detail-screen" class="screen hidden">
-            <div class="content-box">
-                <h2 id="game-detail-title"></h2>
-                <p id="game-detail-mechanics"></p>
-            </div>
+            <h2 id="game-detail-title"></h2>
+            <p id="game-detail-mechanics"></p>
             <div id="start-form-container">
                 <input type="text" id="team-name-input" placeholder="Nombre de tu equipo" required>
                 <button id="start-game-btn" class="action-button">¡Comenzar Aventura!</button>
@@ -60,21 +58,17 @@
         <section id="game-play-screen" class="screen hidden">
 
             <div id="narrative-view" class="game-view hidden">
-                <div class="content-box narrative-box">
-                    <img id="narrative-image" src="" alt="Imagen de la narrativa" class="hidden">
-                    <audio id="narrative-audio" src=""></audio>
-                    <p id="narrative-text"></p>
-                    <button id="narrative-continue-btn" class="action-button">Continuar</button>
-                </div>
+                <img id="narrative-image" src="" alt="Imagen de la narrativa" class="hidden">
+                <audio id="narrative-audio" src=""></audio>
+                <p id="narrative-text"></p>
+                <button id="narrative-continue-btn" class="action-button">Continuar</button>
             </div>
 
             <div id="location-navigation-view" class="game-view hidden">
-                <div class="content-box">
-                    <h2 id="nav-location-name"></h2>
-                    <img id="nav-location-image" class="narrative-image hidden" alt="Location Image">
-                    <audio id="nav-location-audio" preload="auto"></audio>
-                    <p id="nav-pre-arrival-narrative"></p>
-                </div>
+                <h2 id="nav-location-name"></h2>
+                <img id="nav-location-image" class="narrative-image hidden" alt="Location Image">
+                <audio id="nav-location-audio" preload="auto"></audio>
+                <p id="nav-pre-arrival-narrative"></p>
                 <div id="location-map" class="map-container"></div>
                 <p id="distance-info">Calculando distancia...</p>
                 <div class="arrival-status">
@@ -90,14 +84,12 @@
             </div>
 
             <div id="trial-view" class="game-view hidden">
-                <div class="content-box">
-                    <div id="trial-header">
-                        <div id="trial-timer-display" class="trial-timer">00:00</div>
-                    </div>
-                    <img id="trial-image" src="" alt="Imagen de la prueba" class="hidden">
-                    <audio id="trial-audio" src=""></audio>
-                    <p id="trial-narrative"></p>
+                <div id="trial-header">
+                    <div id="trial-timer-display" class="trial-timer">00:00</div>
                 </div>
+                <img id="trial-image" src="" alt="Imagen de la prueba" class="hidden">
+                <audio id="trial-audio" src=""></audio>
+                <p id="trial-narrative"></p>
 
                 <div id="trial-content"></div>
 
@@ -111,27 +103,22 @@
         </section>
 
         <section id="game-over-screen" class="screen hidden">
-            <div class="content-box">
-                <h2>¡Aventura Completada!</h2>
-                <p>¡Enhorabuena, <span id="final-team-name"></span>!</p>
-                <div class="final-stats">
-                    <p><strong>Puntuación Final:</strong> <span id="final-score"></span></p>
-                    <p><strong>Tiempo Total:</strong> <span id="final-time"></span></p>
-                </div>
-                <h3>Ranking del Juego</h3>
-                <div id="final-ranking-container"></div>
-                <button id="play-again-btn" class="action-button">Jugar de Nuevo</button>
+            <h2>¡Aventura Completada!</h2>
+            <p>¡Enhorabuena, <span id="final-team-name"></span>!</p>
+            <div class="final-stats">
+                <p><strong>Puntuación Final:</strong> <span id="final-score"></span></p>
+                <p><strong>Tiempo Total:</strong> <span id="final-time"></span></p>
             </div>
+            <h3>Ranking del Juego</h3>
+            <div id="final-ranking-container"></div>
+            <button id="play-again-btn" class="action-button">Jugar de Nuevo</button>
         </section>
     </main>
 
-    <div id="app-alert"></div> <!-- Eliminada la clase hidden, ahora el JS la gestiona -->
-    <div id="qr-scanner-modal"> <!-- Eliminada la clase hidden, ahora el JS la gestiona -->
-        <div id="qr-reader"></div>
+    <div id="app-alert"></div> <div id="qr-scanner-modal"> <div id="qr-reader"></div>
         <button id="close-qr-scanner-btn">Cerrar Escáner</button>
     </div>
-    <div id="hint-modal"> <!-- Eliminada la clase hidden, ahora el JS la gestiona -->
-        <div class="hint-content">
+    <div id="hint-modal"> <div class="hint-content">
             <h3>Pista</h3>
             <p id="hint-text"></p>
             <button id="close-hint-btn">Entendido</button>

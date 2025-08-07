@@ -60,7 +60,7 @@ body {
 /* ======== PANTALLAS PRINCIPALES ======== */
 .screen {
     width: 100%;
-    max-width: var(--app-max-width); /* Asegura que las pantallas no se estiren demasiado */
+    max-width: none; /* Elimina la restricción de ancho máximo */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -69,7 +69,7 @@ body {
 }
 
 
-/* Contenedor general para el contenido con fondo y sombra */
+/* SECCIÓN ELIMINADA: Se ha quitado el contenedor con fondo y sombra para que el contenido ocupe todo el ancho.
 .content-box {
     background: var(--surface);
     padding: 25px;
@@ -77,9 +77,10 @@ body {
     box-shadow: var(--shadow);
     margin-bottom: 20px;
     width: 100%;
-    max-width: var(--app-max-width); /* Restringe el ancho del contenido interno */
-    box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+    max-width: var(--app-max-width);
+    box-sizing: border-box;
 }
+*/
 
 /* ======== HEADER DEL JUEGO ======== */
 #game-header {
@@ -165,22 +166,17 @@ body {
 
 /* ======== ESTILOS PARA IMÁGENES ======== */
 /* Regla general para todas las imágenes dentro del contenido */
-.content-box img,
-.narrative-box img,
-#narrative-text img,
-.narrative-image,
-#trial-image,
-#nav-location-image {
-    width: 100% !important; /* Fuerza que ocupe el 100% del ancho del contenedor */
-    max-width: 100% !important; /* Asegura que no exceda el ancho del contenedor */
-    height: auto !important; /* Mantiene la proporción de la imagen */
-    display: block; /* Elimina espacio extra inferior y permite margin auto */
-    margin: 10px auto 20px auto; /* Centra la imagen y da espacio */
+.game-view img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 10px auto 20px auto;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
-    box-sizing: border-box; /* Incluye padding y border en el cálculo del ancho */
-    cursor: pointer; /* Añadido para indicar que se puede hacer clic */
+    object-fit: cover;
+    box-sizing: border-box;
+    cursor: pointer;
 }
 
 /* Específicamente para imágenes de narrativa */
@@ -304,19 +300,16 @@ body {
 /* Vistas dentro de GamePlay */
 .game-view {
     width: 100%;
-    max-width: var(--app-max-width);
+    max-width: none; /* Elimina la restricción de ancho máximo */
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 20px 0; /* Solo padding vertical */
+    padding: 20px 15px; /* Relleno lateral para que el contenido no se pegue a los bordes */
 }
 
 
-/* Contenedor de narrativa (puede ser usado en varias vistas) */
-.narrative-box {
-    padding-bottom: 30px; /* Más espacio para el botón */
-}
+/* SECCIÓN ELIMINADA: .narrative-box */
 
 #narrative-text {
     font-size: 1.1em;
@@ -461,8 +454,8 @@ body {
 }
 
 #trial-content {
-    background: var(--background);
-    padding: 20px;
+    background: none; /* Se ha eliminado el fondo para que ocupe todo el ancho */
+    padding: 0; /* Se ha eliminado el padding */
     border-radius: var(--border-radius);
     width: 100%;
     margin-bottom: 20px;
