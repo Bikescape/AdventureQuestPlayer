@@ -60,7 +60,8 @@ body {
 /* ======== PANTALLAS PRINCIPALES ======== */
 .screen {
     width: 100%;
-    max-width: none; /* Elimina la restricción de ancho máximo */
+    /* ANTES: max-width: var(--app-max-width); */
+    max-width: none; /* Se ha eliminado el ancho máximo para que ocupe toda la pantalla */
     display: flex;
     flex-direction: column;
     align-items: center;
