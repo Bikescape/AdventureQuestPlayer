@@ -878,7 +878,7 @@ function processAnswer(isCorrect) {
 
     } else {
         showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
-        startTrialTimer(); // Reinicia el temporizador si la respuesta es incorrecta
+        // ❌ CORREGIDO: Se eliminó la llamada a startTrialTimer() para que el cronómetro continúe
     }
 }
 
