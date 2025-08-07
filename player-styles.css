@@ -304,6 +304,7 @@ body {
     text-align: justify;
     hyphens: auto;
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 #narrative-audio {
@@ -437,6 +438,7 @@ body {
     text-align: justify;
     hyphens: auto;
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 #trial-content {

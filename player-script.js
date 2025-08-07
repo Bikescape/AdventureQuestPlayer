@@ -548,7 +548,7 @@ function advanceToNextTrial() {
  * Esta función ahora se usa solo para la narrativa inicial del juego y de las ubicaciones.
  */
 function showNarrativeView(text, imageUrl, audioUrl, onContinue) {
-    UIElements.narrativeText.innerHTML = text || "Un momento de calma antes de la siguiente prueba...";
+    UIElements.narrativeText.innerHTML = text.replace(/\n/g, '<br>') || "Un momento de calma antes de la siguiente prueba...";
     if (UIElements.narrativeImage) { // Añadir comprobación
         UIElements.narrativeImage.classList.toggle('hidden', !imageUrl);
         UIElements.narrativeImage.src = imageUrl || '';
@@ -658,7 +658,7 @@ function showListView(type, items, onSelect) {
  */
 function renderTrial(trial) {
     console.log("Rendering trial:", trial.id, trial.name); // DEBUG: Más específico
-    UIElements.trialNarrative.innerHTML = trial.narrative; // La narrativa se muestra aquí
+    UIElements.trialNarrative.innerHTML = trial.narrative.replace(/\n/g, '<br>'); // La narrativa se muestra aquí
 
     // DEBUG: Log the value of UIElements.trialImage before attempting to use it
     console.log("DEBUG: UIElements.trialImage before use (line 667 context):", UIElements.trialImage);
