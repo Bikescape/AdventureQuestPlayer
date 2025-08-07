@@ -833,12 +833,16 @@ function validateCurrentAnswer() {
  * Procesa el resultado de una validación.
  */
 function processAnswer(isCorrect) {
-    stopTrialTimer();
+    // MODIFICACIÓN: Ya no se llama a stopTrialTimer aquí. Ahora se detendrá cuando la vista cambie.
+    // MODIFICACIÓN: El tiempo se calcula al procesar la respuesta final, no se reinicia con intentos incorrectos.
     const trial = getCurrentTrial();
     const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
     const hintsUsed = getHintsUsedForTrial(trial.id);
 
     if (isCorrect) {
+        // Detener el temporizador de la prueba solo si la respuesta es correcta
+        stopTrialTimer();
+
         const baseScore = gameState.gameData.initial_score_per_trial;
         const timePenalty = timeTaken;
         const hintPenalty = hintsUsed * trial.hint_cost;
@@ -877,7 +881,7 @@ function processAnswer(isCorrect) {
 
     } else {
         showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
-        startTrialTimer(); // Reinicia el temporizador si la respuesta es incorrecta
+        // MODIFICACIÓN: Ya no se llama a startTrialTimer aquí para evitar que se reinicie.
     }
 }
 
