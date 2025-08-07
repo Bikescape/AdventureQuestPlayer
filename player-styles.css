@@ -259,7 +259,7 @@ body {
 }
 
 .game-thumbnail { /* Estilo para la miniatura del juego */
-    width: 50%; /* Hace que sea responsiva a su contenedor */
+    width: 75%; /* Hace que sea responsiva a su contenedor */
     height: auto; /* Mantiene la relación de aspecto */
     object-fit: cover; /* Asegura que la imagen cubra el área sin distorsión */
     border-radius: var(--border-radius); /* Bordes redondeados */
