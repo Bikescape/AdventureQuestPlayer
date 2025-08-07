@@ -657,40 +657,42 @@ body {
     color: var(--text-secondary);
 }
 
-/* NUEVO: Modal de zoom para imágenes */
+/* Estilos para el zoom de imágenes */
 .zoom-modal {
-    position: fixed;
-    z-index: 10005;
+    display: none; /* Oculto por defecto */
+    position: fixed; /* Mantiene el modal en su lugar */
+    z-index: 1000; /* Se superpone a todo lo demás */
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    overflow: auto; /* Permite desplazamiento si la imagen es muy grande */
+    background-color: rgba(0, 0, 0, 0.9); /* Fondo semitransparente oscuro */
+    transition: opacity 0.3s ease-in-out; /* Transición para el efecto de fundido */
+    opacity: 0; /* Opacidad inicial para el efecto de fundido */
+    justify-content: center; /* Centra horizontalmente el contenido */
+    align-items: center; /* Centra verticalmente el contenido */
 }
 
+/* Cuando el modal está activo (visible) */
 .zoom-modal.active {
+    display: flex;
     opacity: 1;
-    visibility: visible;
 }
 
+/* La imagen dentro del modal */
 .zoom-modal-content {
+    margin: auto;
+    display: block;
     max-width: 90%;
     max-height: 90%;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
-    display: block; /* Para centrar la imagen */
-    margin: auto;
+    transition: transform 0.3s ease-in-out;
 }
 
+/* El botón para cerrar el modal */
 .zoom-close-btn {
     position: absolute;
-    top: 20px;
+    top: 15px;
     right: 35px;
     color: #f1f1f1;
     font-size: 40px;

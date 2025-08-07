@@ -834,12 +834,15 @@ function validateCurrentAnswer() {
  * Procesa el resultado de una validación.
  */
 function processAnswer(isCorrect) {
-    stopTrialTimer();
     const trial = getCurrentTrial();
-    const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
-    const hintsUsed = getHintsUsedForTrial(trial.id);
+    if (!trial) return;
 
     if (isCorrect) {
+        // ✅ CORREGIDO: El cronómetro solo se detiene al responder correctamente.
+        stopTrialTimer();
+
+        const timeTaken = Math.floor((new Date() - new Date(lastTrialStartTime)) / 1000);
+        const hintsUsed = getHintsUsedForTrial(trial.id);
         const baseScore = gameState.gameData.initial_score_per_trial;
         const timePenalty = timeTaken;
         const hintPenalty = hintsUsed * trial.hint_cost;
@@ -878,9 +881,10 @@ function processAnswer(isCorrect) {
 
     } else {
         showAlert('Respuesta incorrecta. ¡Inténtalo de nuevo!', 'error', UIElements.trialContent); // Pasa trialContent como padre
-        // ❌ CORREGIDO: Se eliminó la llamada a startTrialTimer() para que el cronómetro continúe
+        // El cronómetro continúa ejecutándose aquí, ya no se reinicia.
     }
 }
+
 
 /**
  * Solicita una pista para la prueba actual.
